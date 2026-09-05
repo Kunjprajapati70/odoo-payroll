@@ -17,10 +17,15 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const data = await authService.login(email, password)
-    setUser(data.user)
-    localStorage.setItem('pp360_user', JSON.stringify(data.user))
-    localStorage.setItem('pp360_token', data.token)
-    return data
+    // Support both unwrapped { user, token } and nested { data: { user, token } }
+    const payload = data?.user && data?.token ? data : data?.data
+    if (!payload?.user || !payload?.token) {
+      throw new Error('Invalid login response')
+    }
+    setUser(payload.user)
+    localStorage.setItem('pp360_user', JSON.stringify(payload.user))
+    localStorage.setItem('pp360_token', payload.token)
+    return payload
   }, [])
 
   const logout = useCallback(() => {
