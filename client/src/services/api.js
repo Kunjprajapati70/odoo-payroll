@@ -12,14 +12,31 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 globally
+// Unwrap { success, message, data } envelope and handle 401
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Keep blob downloads intact (PDF, etc.)
+    if (response.config.responseType === 'blob') return response
+
+    const body = response.data
+    if (
+      body &&
+      typeof body === 'object' &&
+      !Array.isArray(body) &&
+      Object.prototype.hasOwnProperty.call(body, 'success') &&
+      Object.prototype.hasOwnProperty.call(body, 'data')
+    ) {
+      response.data = body.data
+    }
+    return response
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('pp360_token')
       localStorage.removeItem('pp360_user')
-      window.location.href = '/login'
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

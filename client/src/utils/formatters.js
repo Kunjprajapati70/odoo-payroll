@@ -4,8 +4,12 @@ export const formatCurrency = (amount, currency = 'USD') =>
 export const formatDate = (date) =>
   date ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(date)) : '—'
 
-export const formatDateInput = (date) =>
-  date ? new Date(date).toISOString().split('T')[0] : ''
+export const formatDateInput = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toISOString().split('T')[0]
+}
 
 export const formatFullName = (employee) =>
   employee ? `${employee.firstName} ${employee.lastName}` : '—'

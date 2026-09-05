@@ -1,6 +1,7 @@
 export const ROLES = {
   ADMIN: 'admin',
   HR_MANAGER: 'hr_manager',
+  PAYROLL_USER: 'payroll_user',
   PAYROLL_MANAGER: 'payroll_manager',
   EMPLOYEE: 'employee',
 }
@@ -31,11 +32,11 @@ export const TIME_OFF_STATUSES = {
 }
 
 export const PAYRUN_STATUSES = {
-  DRAFT: 'draft',
+  DRAFT:      'draft',
   PROCESSING: 'processing',
-  DONE: 'done',
-  APPROVED: 'approved',
-  CANCELLED: 'cancelled',
+  DONE:       'done',
+  APPROVED:   'approved',
+  CANCELLED:  'cancelled',
 }
 
 export const SALARY_RULE_TYPES = {

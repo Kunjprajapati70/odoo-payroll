@@ -2,8 +2,10 @@ import LoadingSpinner from './LoadingSpinner'
 import EmptyState from './EmptyState'
 
 export default function DataTable({ columns, data, loading, emptyMessage = 'No records found' }) {
+  const rows = Array.isArray(data) ? data : []
+
   if (loading) return <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-  if (!data?.length) return <EmptyState message={emptyMessage} />
+  if (!rows.length) return <EmptyState message={emptyMessage} />
 
   return (
     <div className="overflow-x-auto">
@@ -18,7 +20,7 @@ export default function DataTable({ columns, data, loading, emptyMessage = 'No r
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {data.map((row, i) => (
+          {rows.map((row, i) => (
             <tr key={row._id ?? i} className="hover:bg-gray-50 transition-colors">
               {columns.map((col) => (
                 <td key={col.key} className="table-cell">

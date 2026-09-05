@@ -6,6 +6,7 @@ export const can = (user, action) => {
 
   const permissions = {
     [ROLES.ADMIN]: ['*'],
+
     [ROLES.HR_MANAGER]: [
       'employees:read', 'employees:write',
       'departments:read', 'departments:write',
@@ -15,11 +16,21 @@ export const can = (user, action) => {
       'payroll:read',
       'reports:read',
     ],
+
+    // HR Payroll User — can process payroll but not approve
+    [ROLES.PAYROLL_USER]: [
+      'employees:read',
+      'payroll:read', 'payroll:write',
+      'reports:read',
+    ],
+
+    // HR Payroll Manager — full payroll control
     [ROLES.PAYROLL_MANAGER]: [
       'employees:read',
       'payroll:read', 'payroll:write', 'payroll:approve',
       'reports:read',
     ],
+
     [ROLES.EMPLOYEE]: [
       'employees:read:own',
       'payslips:read:own',
