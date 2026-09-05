@@ -37,6 +37,24 @@ router.use('/time-off/types', timeOffTypeRoutes);
 router.use('/leave-allocations', leaveAllocationRoutes);
 router.use('/leave-requests', leaveRequestRoutes);
 
+// Salary Structure & Salary Rule routes
+const salaryRuleRoutes = require('./salaryRule.routes');
+const salaryStructureRoutes = require('./salaryStructure.routes');
+
+router.use('/salary-rules', salaryRuleRoutes);
+router.use('/salary-structures', salaryStructureRoutes);
+
+// Payrun & Payslip routes
+const payrunRoutes = require('./payrun.routes');
+const payslipRoutes = require('./payslip.routes');
+
+router.use('/payruns', payrunRoutes);
+router.use('/payslips', payslipRoutes);
+
+// Payroll Dashboard routes
+const dashboardRoutes = require('./dashboard.routes');
+router.use('/dashboard', dashboardRoutes);
+
 // RBAC demonstration & testing routes
 const rbacDemoRoutes = require('./rbac-demo.routes');
 router.use('/rbac-demo', rbacDemoRoutes);

@@ -6,6 +6,11 @@ const payrunWarningSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Employee'
     },
+    severity: {
+      type: String,
+      enum: ['ERROR', 'WARNING'],
+      default: 'WARNING'
+    },
     code: {
       type: String,
       required: true
