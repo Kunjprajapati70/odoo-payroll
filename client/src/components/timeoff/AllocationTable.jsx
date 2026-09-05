@@ -8,14 +8,15 @@ export default function AllocationTable({ data, loading, onEdit }) {
       key: 'employee', label: 'Employee',
       render: r => <span className="font-medium text-gray-900">{formatFullName(r.employee) || '—'}</span>
     },
-    { key: 'leaveType', label: 'Leave Type', render: r => <span className="text-sm">{r.leaveType?.name || '—'}</span> },
+    { key: 'leaveType', label: 'Leave Type', render: r => <span className="text-sm">{r.timeOffType?.name || r.leaveType?.name || '—'}</span> },
     { key: 'year', label: 'Year', render: r => <span className="text-sm">{r.year}</span> },
-    { key: 'allocated', label: 'Allocated', render: r => <span className="text-sm font-medium">{r.allocatedDays} days</span> },
-    { key: 'used', label: 'Used', render: r => <span className="text-sm text-orange-600">{r.usedDays || 0} days</span> },
+    { key: 'allocatedDays', label: 'Allocated', render: r => <span className="text-sm font-medium">{r.allocatedDays ?? r.totalDays} days</span> },
+    { key: 'usedDays', label: 'Used', render: r => <span className="text-sm text-orange-600">{r.usedDays || 0} days</span> },
     {
       key: 'remaining', label: 'Remaining',
       render: r => {
-        const rem = (r.allocatedDays || 0) - (r.usedDays || 0)
+        const allocated = r.allocatedDays ?? r.totalDays ?? 0
+        const rem = r.remainingDays != null ? r.remainingDays : allocated - (r.usedDays || 0)
         return <span className={`text-sm font-medium ${rem > 0 ? 'text-green-600' : 'text-red-500'}`}>{rem} days</span>
       }
     },

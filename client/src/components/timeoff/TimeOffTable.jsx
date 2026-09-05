@@ -10,7 +10,7 @@ export default function TimeOffTable({ data, loading, onApprove, onReject, canAp
       key: 'employee', label: 'Employee',
       render: r => <span className="font-medium text-gray-900">{formatFullName(r.employee) || '—'}</span>
     },
-    { key: 'leaveType', label: 'Type', render: r => <span className="text-sm">{r.leaveType?.name || '—'}</span> },
+    { key: 'leaveType', label: 'Type', render: r => <span className="text-sm">{r.timeOffType?.name || r.leaveType?.name || '—'}</span> },
     { key: 'startDate', label: 'Start', render: r => <span className="text-sm text-gray-600">{formatDate(r.startDate)}</span> },
     { key: 'endDate', label: 'End', render: r => <span className="text-sm text-gray-600">{formatDate(r.endDate)}</span> },
     {

@@ -225,7 +225,7 @@ export default function CreatePayrun() {
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                After creating this pay run, go to Pay Runs list and click "Compute" to calculate salaries, then "Approve" to finalize and generate payslips.
+                After creating this pay run, go to Pay Runs and click Compute, then Validate, then Mark as Paid.
               </p>
             </div>
           )}

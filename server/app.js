@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
-const { CLIENT_URL } = require('./config/env')
+const { CLIENT_URL, NODE_ENV } = require('./config/env')
 const { errorHandler, notFound } = require('./middleware/errorMiddleware')
 
 // Route imports
@@ -21,8 +21,20 @@ const dashboardRoutes = require('./routes/dashboardRoutes')
 
 const app = express()
 
-// Middleware
-app.use(cors({ origin: CLIENT_URL, credentials: true }))
+const isPrivateLanOrigin = (origin = '') =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ||
+  /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i.test(origin)
+
+// Allow configured client + local/LAN origins (Wi‑Fi phones & tablets)
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true)
+    if (origin === CLIENT_URL || isPrivateLanOrigin(origin)) return callback(null, true)
+    if (NODE_ENV !== 'production') return callback(null, true)
+    return callback(new Error(`CORS blocked for origin: ${origin}`))
+  },
+  credentials: true,
+}))
 app.use(express.json())
 app.use(morgan('dev'))
 

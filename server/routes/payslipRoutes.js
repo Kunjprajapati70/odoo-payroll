@@ -7,5 +7,6 @@ router.get('/', getAll)
 router.get('/:id', getById)
 router.get('/:id/pdf', downloadPdf)
 router.post('/:id/send-email', sendEmail)
+router.post('/:id/send', sendEmail)
 
 module.exports = router

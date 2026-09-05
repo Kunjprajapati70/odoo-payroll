@@ -3,8 +3,10 @@ import { capitalize } from '../../utils/formatters'
 const colors = {
   active:     'bg-green-100 text-green-700',
   approved:   'bg-green-100 text-green-700',
+  validated:  'bg-green-100 text-green-700',
   present:    'bg-green-100 text-green-700',
   paid:       'bg-emerald-100 text-emerald-700',
+  computed:   'bg-blue-100 text-blue-700',
   done:       'bg-blue-100 text-blue-700',
   processing: 'bg-yellow-100 text-yellow-700',
   pending:    'bg-yellow-100 text-yellow-700',

@@ -13,9 +13,17 @@ const employeeValidation = [
 
 const contractValidation = [
   body('employee').notEmpty().withMessage('Employee required'),
-  body('wage').isNumeric({ min: 0 }).withMessage('Valid wage required'),
-  body('contractType').notEmpty().withMessage('Contract type required'),
+  body('salaryStructure').optional({ nullable: true, checkFalsy: true }),
   body('startDate').isISO8601().withMessage('Valid start date required'),
+  body().custom((_, { req }) => {
+    if (req.body.wage == null && req.body.salary == null) {
+      throw new Error('wage or salary is required')
+    }
+    if (!req.body.contractType && !req.body.type) {
+      throw new Error('contractType is required')
+    }
+    return true
+  }),
 ]
 
 module.exports = { loginValidation, employeeValidation, contractValidation }

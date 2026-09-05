@@ -22,10 +22,13 @@ export default function Payslips() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   const [yearFilter, setYearFilter] = useState('')
   const [monthFilter, setMonthFilter] = useState('')
   const [actionLoading, setActionLoading] = useState(null)
   const debouncedSearch = useDebounce(search)
+
+  useEffect(() => { setAppliedSearch(debouncedSearch) }, [debouncedSearch])
 
   const payrunId = searchParams.get('payrun')
 
@@ -45,7 +48,7 @@ export default function Payslips() {
     try {
       const res = await payslipService.getAll({
         page, limit: 20,
-        search: debouncedSearch || undefined,
+        search: appliedSearch || undefined,
         year: yearFilter || undefined,
         month: monthFilter || undefined,
         payrun: payrunId || undefined,
@@ -57,9 +60,9 @@ export default function Payslips() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, yearFilter, monthFilter, payrunId])
+  }, [page, appliedSearch, yearFilter, monthFilter, payrunId])
 
-  useEffect(() => { setPage(1) }, [debouncedSearch, yearFilter, monthFilter])
+  useEffect(() => { setPage(1) }, [appliedSearch, yearFilter, monthFilter])
   useEffect(() => { fetchPayslips() }, [fetchPayslips])
 
   const handleDownload = async (id) => {
@@ -103,7 +106,13 @@ export default function Payslips() {
     },
     {
       key: 'period', label: 'Period',
-      render: r => <span className="text-sm text-gray-600">{r.period || (r.month && r.year ? `${r.month}/${r.year}` : '—')}</span>
+      render: r => (
+        <span className="text-sm text-gray-600">
+          {r.periodStart
+            ? `${formatDate(r.periodStart)} – ${formatDate(r.periodEnd)}`
+            : r.period || (r.month && r.year ? `${r.month}/${r.year}` : '—')}
+        </span>
+      )
     },
     { key: 'basic', label: 'Basic', render: r => <span className="text-sm">{formatCurrency(r.basicSalary ?? r.basic)}</span> },
     { key: 'allowances', label: 'Allowances', render: r => <span className="text-sm text-green-600">+{formatCurrency(r.totalAllowances ?? r.allowances)}</span> },
@@ -141,30 +150,42 @@ export default function Payslips() {
     <div>
       <PageHeader title="Payslips" subtitle="View and manage employee payslips" />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="card mb-4 p-4 flex flex-nowrap items-end gap-3 overflow-x-auto">
+        <div className="relative flex-1 min-w-[160px]">
+          <label className="label-base">Search</label>
+          <Search size={14} className="absolute left-3 bottom-2.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search employee..."
+            placeholder="Search employee... (press Enter)"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                setAppliedSearch(search)
+              }
+            }}
             className="input-base pl-8 py-1.5 text-sm"
           />
         </div>
-        <Select
-          options={[{ value: '', label: 'All Years' }, ...yearOptions]}
-          value={yearFilter}
-          onChange={e => setYearFilter(e.target.value)}
-          className="w-28 py-1.5"
-        />
-        <Select
-          options={[{ value: '', label: 'All Months' }, ...monthOptions]}
-          value={monthFilter}
-          onChange={e => setMonthFilter(e.target.value)}
-          className="w-36 py-1.5"
-        />
+        <div className="w-28 shrink-0">
+          <Select
+            label="Year"
+            options={[{ value: '', label: 'All Years' }, ...yearOptions]}
+            value={yearFilter}
+            onChange={e => setYearFilter(e.target.value)}
+            className="py-1.5"
+          />
+        </div>
+        <div className="w-36 shrink-0">
+          <Select
+            label="Month"
+            options={[{ value: '', label: 'All Months' }, ...monthOptions]}
+            value={monthFilter}
+            onChange={e => setMonthFilter(e.target.value)}
+            className="py-1.5"
+          />
+        </div>
       </div>
 
       {error && !loading ? (

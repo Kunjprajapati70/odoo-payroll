@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import { dashboardService } from '../../services/dashboardService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import { formatCurrency } from '../../utils/formatters'
 
 const COLORS = ['#4f46e5', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6']
 
@@ -42,8 +43,12 @@ export default function Reports() {
         const res = await dashboardService.getDepartmentChart()
         data = Array.isArray(res) ? res : res?.data || []
       } else if (selectedReport === 'timeoff') {
-        // Dedicated time-off chart endpoint not available yet
-        data = []
+        const summary = await dashboardService.getSummary({ year: filters.year })
+        data = (summary.timeOffOverview || []).map(row => ({
+          label: row.status,
+          count: row.count || 0,
+          days: row.days || 0,
+        }))
       }
       setChartData(data)
       setGenerated(true)
@@ -84,7 +89,7 @@ export default function Reports() {
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="month" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip formatter={v => `$${v?.toLocaleString()}`} />
+          <Tooltip formatter={v => formatCurrency(v)} />
           <Bar dataKey="total" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Total Salary" />
         </BarChart>
       </ResponsiveContainer>
@@ -118,9 +123,17 @@ export default function Reports() {
     )
 
     if (selectedReport === 'timeoff') return (
-      <div className="flex justify-center h-64 items-center text-sm text-gray-400">
-        Time off reporting will be available once leave analytics are enabled on the server.
-      </div>
+      <ResponsiveContainer width="100%" height={320}>
+        <BarChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Requests" />
+          <Bar dataKey="days" fill="#22c55e" radius={[4, 4, 0, 0]} name="Days" />
+        </BarChart>
+      </ResponsiveContainer>
     )
 
     return null

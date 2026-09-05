@@ -1,7 +1,17 @@
 import axios from 'axios'
 
+/**
+ * Prefer same-origin /api (Vite proxy) so phones on Wi‑Fi work via LAN IP.
+ * Override with VITE_API_URL when the API is on a different host.
+ */
+const resolveApiBase = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  if (typeof window !== 'undefined') return '/api'
+  return 'http://127.0.0.1:5000/api'
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: resolveApiBase(),
   headers: { 'Content-Type': 'application/json' },
 })
 

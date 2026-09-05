@@ -30,14 +30,18 @@ export default function SalaryRuleTable({ data, loading, onEdit, onDelete }) {
     },
     {
       key: 'calc', label: 'Calculation',
-      render: r => (
-        <span className="text-sm text-gray-700">
-          <span className="capitalize text-gray-500">{r.calculationType} </span>
-          {r.calculationType === 'fixed' && `$${r.amount}`}
-          {r.calculationType === 'percentage' && `${r.percentage}%`}
-          {r.calculationType === 'formula' && <code className="text-xs bg-gray-100 px-1 rounded">{r.formula}</code>}
-        </span>
-      )
+      render: r => {
+        const calc = r.calculationType || r.computationType || ''
+        const isPct = String(calc).includes('percentage')
+        return (
+          <span className="text-sm text-gray-700">
+            <span className="capitalize text-gray-500">{isPct ? 'percentage' : calc} </span>
+            {calc === 'fixed' && `₹${Number(r.amount || 0).toLocaleString('en-IN')}`}
+            {isPct && `${r.percentage}%`}
+            {calc === 'formula' && <code className="text-xs bg-gray-100 px-1 rounded">{r.formula}</code>}
+          </span>
+        )
+      }
     },
     {
       key: 'actions', label: '', width: 80,

@@ -6,6 +6,7 @@ import { EMPLOYMENT_TYPES, GENDER_OPTIONS, MARITAL_STATUS } from '../../utils/co
 import { departmentService } from '../../services/departmentService'
 import { scheduleService } from '../../services/scheduleService'
 import { formatDateInput } from '../../utils/formatters'
+import { isValidEmail, isValidPhone, isRequired, normalizePhone } from '../../utils/validators'
 
 const TABS = ['Personal', 'Job', 'Contact']
 
@@ -40,23 +41,53 @@ export default function EmployeeForm({ initial = {}, onSubmit, loading }) {
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
-  const validate = () => {
+  const validateTab = (tabIndex) => {
     const errs = {}
-    if (!form.firstName.trim()) errs.firstName = 'Required'
-    if (!form.lastName.trim()) errs.lastName = 'Required'
-    if (!form.email.trim()) errs.email = 'Required'
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email'
-    if (!form.jobTitle.trim()) errs.jobTitle = 'Required'
-    if (!form.hireDate) errs.hireDate = 'Required'
+    if (tabIndex === 0) {
+      if (!isRequired(form.firstName)) errs.firstName = 'Required'
+      if (!isRequired(form.lastName)) errs.lastName = 'Required'
+    }
+    if (tabIndex === 1) {
+      if (!isRequired(form.jobTitle)) errs.jobTitle = 'Required'
+      if (!isRequired(form.hireDate)) errs.hireDate = 'Required'
+    }
+    if (tabIndex === 2) {
+      if (!isRequired(form.email)) errs.email = 'Required'
+      else if (!isValidEmail(form.email)) errs.email = 'Enter a valid email'
+      if (form.phone && !isValidPhone(form.phone)) errs.phone = 'Phone must be exactly 10 digits'
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
 
+  const validateAll = () => validateTab(0) && validateTab(1) && validateTab(2)
+
+  const goNext = () => {
+    if (!validateTab(tab)) return
+    setTab(t => t + 1)
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!validate()) return
+    // Validate every required tab before save
+    const allErrs = {}
+    if (!isRequired(form.firstName)) allErrs.firstName = 'Required'
+    if (!isRequired(form.lastName)) allErrs.lastName = 'Required'
+    if (!isRequired(form.jobTitle)) allErrs.jobTitle = 'Required'
+    if (!isRequired(form.hireDate)) allErrs.hireDate = 'Required'
+    if (!isRequired(form.email)) allErrs.email = 'Required'
+    else if (!isValidEmail(form.email)) allErrs.email = 'Enter a valid email'
+    if (form.phone && !isValidPhone(form.phone)) allErrs.phone = 'Phone must be exactly 10 digits'
+    setErrors(allErrs)
+    if (Object.keys(allErrs).length) {
+      if (allErrs.firstName || allErrs.lastName) setTab(0)
+      else if (allErrs.jobTitle || allErrs.hireDate) setTab(1)
+      else setTab(2)
+      return
+    }
     const payload = { ...form }
     if (!payload.dateOfBirth) delete payload.dateOfBirth
+    if (payload.phone) payload.phone = normalizePhone(payload.phone)
     onSubmit(payload)
   }
 
@@ -67,14 +98,17 @@ export default function EmployeeForm({ initial = {}, onSubmit, loading }) {
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Tabs */}
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div className="flex border-b border-gray-200">
         {TABS.map((t, i) => (
           <button
             key={t}
             type="button"
-            onClick={() => setTab(i)}
+            onClick={() => {
+              // Only allow forward if current tab valid; allow going back freely
+              if (i > tab && !validateTab(tab)) return
+              setTab(i)
+            }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === i
                 ? 'border-primary-600 text-primary-600'
@@ -110,7 +144,7 @@ export default function EmployeeForm({ initial = {}, onSubmit, loading }) {
       {tab === 2 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Email *" type="email" value={form.email} onChange={set('email')} error={errors.email} placeholder="john@company.com" />
-          <Input label="Phone" value={form.phone} onChange={set('phone')} placeholder="+1 234 567 8900" />
+          <Input label="Phone (10 digits)" value={form.phone} onChange={set('phone')} error={errors.phone} placeholder="9876543210" maxLength={14} />
           <Input label="Address" value={form.address} onChange={set('address')} placeholder="123 Main St" />
           <Input label="City" value={form.city} onChange={set('city')} placeholder="New York" />
           <Input label="Country" value={form.country} onChange={set('country')} placeholder="United States" />
@@ -123,7 +157,7 @@ export default function EmployeeForm({ initial = {}, onSubmit, loading }) {
         </div>
         <div className="flex gap-2">
           {tab < TABS.length - 1 ? (
-            <Button type="button" onClick={() => setTab(t => t + 1)}>Next</Button>
+            <Button type="button" onClick={goNext}>Next</Button>
           ) : (
             <Button type="submit" loading={loading}>Save Employee</Button>
           )}

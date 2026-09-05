@@ -1,24 +1,35 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { authService } from '../../services/authService'
+import { isValidEmail } from '../../utils/validators'
 import { CheckCircle } from 'lucide-react'
 
 export default function ForgotPassword() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [demoToken, setDemoToken] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     if (!email) { setError('Please enter your email'); return }
+    if (!isValidEmail(email)) { setError('Enter a valid email address'); return }
     setLoading(true)
     try {
-      await authService.forgotPassword(email)
-      setSent(true)
+      const res = await authService.forgotPassword(email)
+      // API unwraps data — demo mode may include resetToken
+      const token = res?.resetToken
+      if (token) {
+        setDemoToken(token)
+        setSent(true)
+      } else {
+        setSent(true)
+      }
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to send reset email')
     } finally {
@@ -42,8 +53,19 @@ export default function ForgotPassword() {
             <div className="text-center py-4">
               <CheckCircle size={40} className="text-green-500 mx-auto mb-3" />
               <p className="text-sm font-medium text-gray-800 mb-1">Check your inbox</p>
-              <p className="text-xs text-gray-500">We&apos;ve sent a password reset link to <strong>{email}</strong></p>
-              <Link to="/login" className="block mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium">
+              <p className="text-xs text-gray-500 mb-3">
+                We&apos;ve sent a password reset link to <strong>{email}</strong>
+                {demoToken ? ' (demo: SMTP not configured — use the button below).' : '.'}
+              </p>
+              {demoToken && (
+                <Button
+                  className="w-full justify-center mb-3"
+                  onClick={() => navigate(`/reset-password?token=${encodeURIComponent(demoToken)}`)}
+                >
+                  Continue to set new password
+                </Button>
+              )}
+              <Link to="/login" className="block mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium">
                 Back to sign in
               </Link>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from 'react'
-import { Plus, Check, X, MessageSquare } from 'lucide-react'
+import { Plus, Check, X, MessageSquare, Edit2 } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -12,47 +12,123 @@ import ErrorState from '../../components/common/ErrorState'
 import { timeOffService } from '../../services/timeOffService'
 import { employeeService } from '../../services/employeeService'
 import { AppContext } from '../../context/AppContext'
-import { formatDate, formatFullName } from '../../utils/formatters'
-import { TIME_OFF_STATUSES } from '../../utils/constants'
+import { formatDate, formatDateInput, formatFullName } from '../../utils/formatters'
+import { TIME_OFF_STATUSES, ROLES } from '../../utils/constants'
 import { useAuth } from '../../hooks/useAuth'
 import { can } from '../../utils/permissions'
+import { isLeaveMonthAllowed } from '../../utils/validators'
 
-function RequestForm({ employees, types, onSubmit, loading, onClose }) {
-  const [form, setForm] = useState({ employee: '', leaveType: '', startDate: '', endDate: '', reason: '' })
+const DAY_TYPE_OPTS = [
+  { value: 'full_day', label: 'Full Day' },
+  { value: 'half_day', label: 'Half Day' },
+]
+
+function monthMinDate() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  return `${y}-${m}-01`
+}
+
+const HALF_PERIOD_OPTS = [
+  { value: 'morning', label: 'Morning' },
+  { value: 'evening', label: 'Evening' },
+]
+
+function RequestForm({ initial, employees, types, onSubmit, loading, onClose, lockedEmployee }) {
+  const isEdit = !!initial?._id
+  const [form, setForm] = useState({
+    employee: lockedEmployee || initial?.employee?._id || initial?.employee || '',
+    leaveType: initial?.timeOffType?._id || initial?.timeOffType || '',
+    startDate: formatDateInput(initial?.startDate) || '',
+    endDate: formatDateInput(initial?.endDate) || '',
+    dayType: initial?.dayType || 'full_day',
+    halfDayPeriod: initial?.halfDayPeriod || 'morning',
+    reason: initial?.reason || '',
+  })
   const [errors, setErrors] = useState({})
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
+  const minDate = monthMinDate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
     const errs = {}
-    if (!form.employee) errs.employee = 'Required'
+    if (!form.employee && !lockedEmployee) errs.employee = 'Required'
     if (!form.leaveType) errs.leaveType = 'Required'
     if (!form.startDate) errs.startDate = 'Required'
-    if (!form.endDate) errs.endDate = 'Required'
-    if (form.startDate && form.endDate && form.startDate > form.endDate) errs.endDate = 'Must be after start date'
+    else if (!isLeaveMonthAllowed(form.startDate)) errs.startDate = 'Only current or future months allowed'
+    if (form.dayType !== 'half_day') {
+      if (!form.endDate) errs.endDate = 'Required'
+      else if (!isLeaveMonthAllowed(form.endDate)) errs.endDate = 'Only current or future months allowed'
+      if (form.startDate && form.endDate && form.startDate > form.endDate) errs.endDate = 'Must be after start date'
+    } else if (!form.halfDayPeriod) {
+      errs.halfDayPeriod = 'Required'
+    }
+    if (!form.dayType) errs.dayType = 'Required'
+    if (!form.reason || !form.reason.trim()) errs.reason = 'Reason is required'
     setErrors(errs)
     if (Object.keys(errs).length) return
-    onSubmit(form)
+
+    let endDate = form.endDate
+    if (form.dayType === 'half_day') endDate = form.startDate
+
+    onSubmit({
+      employee: form.employee || lockedEmployee || undefined,
+      timeOffType: form.leaveType,
+      startDate: form.startDate,
+      endDate,
+      dayType: form.dayType,
+      halfDayPeriod: form.dayType === 'half_day' ? form.halfDayPeriod : undefined,
+      reason: form.reason.trim(),
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <Select label="Employee *" options={employees} value={form.employee} onChange={set('employee')} placeholder="Select employee" error={errors.employee} />
+          <Select
+            label="Employee *"
+            options={employees}
+            value={form.employee}
+            onChange={set('employee')}
+            placeholder="Select employee"
+            error={errors.employee}
+            disabled={!!lockedEmployee || isEdit}
+          />
         </div>
         <Select label="Leave Type *" options={types} value={form.leaveType} onChange={set('leaveType')} placeholder="Select type" error={errors.leaveType} />
-        <div />
-        <Input label="Start Date *" type="date" value={form.startDate} onChange={set('startDate')} error={errors.startDate} />
-        <Input label="End Date *" type="date" value={form.endDate} onChange={set('endDate')} error={errors.endDate} />
+        <Select label="Day Type *" options={DAY_TYPE_OPTS} value={form.dayType} onChange={set('dayType')} error={errors.dayType} />
+        {form.dayType === 'half_day' && (
+          <div className="col-span-2">
+            <Select label="Half Day Period *" options={HALF_PERIOD_OPTS} value={form.halfDayPeriod} onChange={set('halfDayPeriod')} error={errors.halfDayPeriod} />
+          </div>
+        )}
+        <Input label="Start Date *" type="date" min={minDate} value={form.startDate} onChange={set('startDate')} error={errors.startDate} />
+        <Input
+          label="End Date *"
+          type="date"
+          min={form.startDate || minDate}
+          value={form.dayType === 'half_day' ? form.startDate : form.endDate}
+          onChange={set('endDate')}
+          error={errors.endDate}
+          disabled={form.dayType === 'half_day'}
+        />
       </div>
       <div>
-        <label className="label-base">Reason</label>
-        <textarea className="input-base resize-none" rows={3} value={form.reason} onChange={set('reason')} placeholder="Optional reason..." />
+        <label className="label-base">Reason *</label>
+        <textarea
+          className={`input-base resize-none ${errors.reason ? 'border-red-400' : ''}`}
+          rows={3}
+          value={form.reason}
+          onChange={set('reason')}
+          placeholder="Why do you need time off?"
+        />
+        {errors.reason && <p className="mt-1 text-xs text-red-500">{errors.reason}</p>}
       </div>
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button type="submit" loading={loading}>Submit Request</Button>
+        <Button type="submit" loading={loading}>{isEdit ? 'Update Request' : 'Submit Request'}</Button>
       </div>
     </form>
   )
@@ -80,6 +156,9 @@ export default function TimeOffRequests() {
   const { user } = useAuth()
   const { addToast } = useContext(AppContext)
   const canApprove = can(user, 'timeoff:approve')
+  const isEmployee = user?.role === ROLES.EMPLOYEE
+  const lockedEmployee = isEmployee ? (user?.employee?._id || user?.employee || '') : ''
+  const myEmployeeId = String(user?.employee?._id || user?.employee || '')
   const [requests, setRequests] = useState([])
   const [employees, setEmployees] = useState([])
   const [types, setTypes] = useState([])
@@ -88,7 +167,7 @@ export default function TimeOffRequests() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [statusFilter, setStatusFilter] = useState('')
-  const [modal, setModal] = useState(false)
+  const [modal, setModal] = useState(null)
   const [rejectTarget, setRejectTarget] = useState(null)
   const [saving, setSaving] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
@@ -97,6 +176,14 @@ export default function TimeOffRequests() {
     { value: '', label: 'All Status' },
     ...Object.values(TIME_OFF_STATUSES).map(v => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }))
   ]
+
+  const canEditRequest = (row) => {
+    if (row.status !== TIME_OFF_STATUSES.PENDING) return false
+    if (isEmployee) {
+      return String(row.employee?._id || row.employee) === myEmployeeId
+    }
+    return true
+  }
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -114,25 +201,34 @@ export default function TimeOffRequests() {
 
   useEffect(() => {
     fetchRequests()
-    employeeService.getAll({ limit: 200 }).then(res => {
-      const list = Array.isArray(res) ? res : res?.data || []
-      setEmployees(list.map(e => ({ value: e._id, label: formatFullName(e) })))
-    }).catch(() => {})
+    if (!isEmployee) {
+      employeeService.getAll({ limit: 200 }).then(res => {
+        const list = Array.isArray(res) ? res : res?.data || []
+        setEmployees(list.map(e => ({ value: e._id, label: formatFullName(e) })))
+      }).catch(() => {})
+    } else if (lockedEmployee) {
+      setEmployees([{ value: lockedEmployee, label: user?.name || 'Me' }])
+    }
     timeOffService.getTypes().then(res => {
       const list = Array.isArray(res) ? res : res?.data || []
       setTypes(list.map(t => ({ value: t._id, label: t.name })))
     }).catch(() => {})
-  }, [fetchRequests])
+  }, [fetchRequests, isEmployee, lockedEmployee, user?.name])
 
-  const handleCreate = async (data) => {
+  const handleSave = async (data) => {
     setSaving(true)
     try {
-      await timeOffService.createRequest(data)
-      addToast('Request submitted', 'success')
-      setModal(false)
+      if (modal?.type === 'edit') {
+        await timeOffService.updateRequest(modal.data._id, data)
+        addToast('Request updated', 'success')
+      } else {
+        await timeOffService.createRequest(data)
+        addToast('Request submitted', 'success')
+      }
+      setModal(null)
       fetchRequests()
     } catch (err) {
-      addToast(err?.response?.data?.message || 'Failed to submit request', 'error')
+      addToast(err?.response?.data?.message || 'Failed to save request', 'error')
     } finally {
       setSaving(false)
     }
@@ -170,22 +266,36 @@ export default function TimeOffRequests() {
       key: 'employee', label: 'Employee',
       render: r => <span className="font-medium text-gray-900">{formatFullName(r.employee) || '—'}</span>
     },
-    { key: 'leaveType', label: 'Leave Type', render: r => <span className="text-sm">{r.leaveType?.name || '—'}</span> },
+    { key: 'leaveType', label: 'Leave Type', render: r => <span className="text-sm">{r.timeOffType?.name || r.leaveType?.name || '—'}</span> },
     { key: 'startDate', label: 'Start', render: r => <span className="text-sm text-gray-600">{formatDate(r.startDate)}</span> },
     { key: 'endDate', label: 'End', render: r => <span className="text-sm text-gray-600">{formatDate(r.endDate)}</span> },
     {
+      key: 'dayType', label: 'Type',
+      render: r => (
+        <span className="text-xs capitalize text-gray-600">
+          {(r.dayType || 'full_day').replace('_', ' ')}
+          {r.dayType === 'half_day' && r.halfDayPeriod ? ` (${r.halfDayPeriod})` : ''}
+        </span>
+      )
+    },
+    {
       key: 'days', label: 'Days',
-      render: r => {
-        if (!r.startDate || !r.endDate) return '—'
-        const diff = Math.ceil((new Date(r.endDate) - new Date(r.startDate)) / (1000 * 60 * 60 * 24)) + 1
-        return <span className="text-sm font-medium">{diff}</span>
-      }
+      render: r => <span className="text-sm font-medium">{r.days ?? '—'}</span>
     },
     { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
     {
-      key: 'actions', label: '', width: 120,
+      key: 'actions', label: '', width: 140,
       render: row => (
         <div className="flex items-center gap-1 justify-end">
+          {canEditRequest(row) && (
+            <button
+              onClick={() => setModal({ type: 'edit', data: row })}
+              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="Edit request"
+            >
+              <Edit2 size={15} />
+            </button>
+          )}
           {canApprove && row.status === TIME_OFF_STATUSES.PENDING && (
             <>
               <button
@@ -219,12 +329,14 @@ export default function TimeOffRequests() {
     <div>
       <PageHeader
         title="Time Off Requests"
-        subtitle="Manage and approve leave requests"
-        actions={<Button icon={Plus} onClick={() => setModal(true)}>New Request</Button>}
+        subtitle={isEmployee ? 'Request leave and edit while pending approval' : 'Manage and approve leave requests'}
+        actions={<Button icon={Plus} onClick={() => setModal({ type: 'create' })}>New Request</Button>}
       />
 
-      <div className="flex items-center gap-3 mb-4">
-        <Select options={statusOpts} value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-40 py-1.5" />
+      <div className="card mb-4 p-4 flex flex-nowrap items-end gap-3 overflow-x-auto">
+        <div className="w-40 shrink-0">
+          <Select label="Status" options={statusOpts} value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="py-1.5" />
+        </div>
       </div>
 
       {error && !loading ? (
@@ -236,8 +348,24 @@ export default function TimeOffRequests() {
         </div>
       )}
 
-      <Modal open={modal} onClose={() => setModal(false)} title="New Time Off Request" size="md">
-        <RequestForm employees={employees} types={types} onSubmit={handleCreate} loading={saving} onClose={() => setModal(false)} />
+      <Modal
+        open={!!modal}
+        onClose={() => setModal(null)}
+        title={modal?.type === 'edit' ? 'Edit Time Off Request' : 'New Time Off Request'}
+        size="md"
+      >
+        {modal && (
+          <RequestForm
+            key={modal?.data?._id || 'new'}
+            initial={modal?.type === 'edit' ? modal.data : null}
+            employees={employees}
+            types={types}
+            onSubmit={handleSave}
+            loading={saving}
+            onClose={() => setModal(null)}
+            lockedEmployee={lockedEmployee}
+          />
+        )}
       </Modal>
 
       <RejectModal

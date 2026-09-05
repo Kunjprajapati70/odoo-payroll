@@ -2,41 +2,47 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Building2, FileText, Calendar,
   Clock, Umbrella, DollarSign, BarChart2, Settings, ChevronDown,
-  X, UserCheck
+  X, UserCheck, UserCog
 } from 'lucide-react'
 import { useState, useContext } from 'react'
 import { AppContext } from '../../context/AppContext'
 import { useAuth } from '../../hooks/useAuth'
+import { canSeeNav } from '../../utils/permissions'
+import { ROLES } from '../../utils/constants'
 
-const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
-  { label: 'Employees', icon: Users, to: '/employees' },
-  { label: 'Departments', icon: Building2, to: '/departments' },
-  { label: 'Contracts', icon: FileText, to: '/contracts' },
-  { label: 'Schedules', icon: Calendar, to: '/schedules' },
-  { label: 'Attendance', icon: Clock, to: '/attendance' },
+const allNavItems = [
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
+  { key: 'users', label: 'Users', icon: UserCog, to: '/users', adminOnly: true },
+  { key: 'employees', label: 'Employees', icon: Users, to: '/employees' },
+  { key: 'departments', label: 'Departments', icon: Building2, to: '/departments' },
+  { key: 'contracts', label: 'Contracts', icon: FileText, to: '/contracts' },
+  { key: 'schedules', label: 'Schedules', icon: Calendar, to: '/schedules' },
+  { key: 'attendance', label: 'Attendance', icon: Clock, to: '/attendance' },
   {
-    label: 'Time Off', icon: Umbrella, children: [
-      { label: 'Types', to: '/time-off/types' },
-      { label: 'Allocations', to: '/time-off/allocations' },
+    key: 'timeoff', label: 'Time Off', icon: Umbrella, children: [
+      { label: 'Types', to: '/time-off/types', staffOnly: true },
+      { label: 'Allocations', to: '/time-off/allocations', staffOnly: true },
       { label: 'Requests', to: '/time-off/requests' },
     ]
   },
   {
-    label: 'Payroll', icon: DollarSign, children: [
-      { label: 'Salary Structures', to: '/payroll/structures' },
-      { label: 'Salary Rules', to: '/payroll/rules' },
-      { label: 'Pay Runs', to: '/payroll/payruns' },
+    key: 'payroll', label: 'Payroll', icon: DollarSign, children: [
+      { label: 'Salary Structures', to: '/payroll/structures', staffOnly: true },
+      { label: 'Salary Rules', to: '/payroll/rules', staffOnly: true },
+      { label: 'Pay Runs', to: '/payroll/payruns', staffOnly: true },
       { label: 'Payslips', to: '/payroll/payslips' },
     ]
   },
-  { label: 'Reports', icon: BarChart2, to: '/reports' },
-  { label: 'Settings', icon: Settings, to: '/settings' },
+  { key: 'reports', label: 'Reports', icon: BarChart2, to: '/reports' },
+  { key: 'settings', label: 'Settings', icon: Settings, to: '/settings' },
 ]
 
-function NavGroup({ item, collapsed }) {
+function NavGroup({ item, collapsed, isEmployee }) {
   const [open, setOpen] = useState(false)
   const Icon = item.icon
+  const children = (item.children || []).filter(c => !(c.staffOnly && isEmployee))
+  if (!children.length) return null
+
   return (
     <div>
       <button
@@ -52,7 +58,7 @@ function NavGroup({ item, collapsed }) {
       </button>
       {open && !collapsed && (
         <div className="ml-7 mt-1 space-y-0.5">
-          {item.children.map(child => (
+          {children.map(child => (
             <NavLink
               key={child.to}
               to={child.to}
@@ -74,10 +80,16 @@ function NavGroup({ item, collapsed }) {
 export default function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useContext(AppContext)
   const { user } = useAuth()
+  const isEmployee = user?.role === ROLES.EMPLOYEE
+  const isAdmin = user?.role === ROLES.ADMIN
+
+  const navItems = allNavItems.filter(item => {
+    if (item.adminOnly && !isAdmin) return false
+    return canSeeNav(user, item.key)
+  })
 
   return (
     <>
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/30 z-20 lg:hidden"
@@ -92,7 +104,6 @@ export default function Sidebar() {
         transition-all duration-200 ease-in-out
         ${sidebarOpen ? 'w-60 translate-x-0' : 'w-60 -translate-x-full lg:translate-x-0 lg:w-16'}
       `}>
-        {/* Logo */}
         <div className="h-14 px-4 border-b border-gray-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center shrink-0">
@@ -113,11 +124,10 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) =>
             item.children ? (
-              <NavGroup key={item.label} item={item} collapsed={!sidebarOpen} />
+              <NavGroup key={item.label} item={item} collapsed={!sidebarOpen} isEmployee={isEmployee} />
             ) : (
               <NavLink
                 key={item.to}
@@ -138,7 +148,6 @@ export default function Sidebar() {
           )}
         </nav>
 
-        {/* User bottom */}
         {sidebarOpen && user && (
           <div className="px-3 py-3 border-t border-gray-100 shrink-0">
             <div className="flex items-center gap-2 px-2">

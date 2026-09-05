@@ -1,6 +1,7 @@
 import api from './api'
 
 export const dashboardService = {
+  getSummary: (params) => api.get('/dashboard/summary', { params }).then(r => r.data),
   getStats: () => api.get('/dashboard/stats').then(r => r.data),
   getSalaryChart: (params) => api.get('/dashboard/salary-chart', { params }).then(r => r.data),
   getAttendanceChart: (params) => api.get('/dashboard/attendance-chart', { params }).then(r => r.data),

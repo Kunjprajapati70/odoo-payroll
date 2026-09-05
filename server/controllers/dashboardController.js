@@ -1,43 +1,46 @@
-const Employee = require('../models/Employee')
-const Payrun = require('../models/Payrun')
-const Attendance = require('../models/Attendance')
-const TimeOffRequest = require('../models/TimeOffRequest')
-const Department = require('../models/Department')
+const asyncHandler = require('../utils/asyncHandler')
+const dashboardService = require('../services/dashboardService')
 const { success } = require('../utils/response')
 
-const getStats = async (req, res) => {
-  const [totalEmployees, pendingLeaves, activePayruns] = await Promise.all([
-    Employee.countDocuments({ status: 'active' }),
-    TimeOffRequest.countDocuments({ status: 'pending' }),
-    Payrun.countDocuments({ status: { $in: ['draft', 'processing'] } }),
-  ])
-  success(res, { totalEmployees, pendingLeaves, activePayruns })
-}
-
-const getSalaryChart = async (req, res) => {
-  // TODO: aggregate payslip totals by month
-  success(res, [])
-}
-
-const getAttendanceChart = async (req, res) => {
-  // TODO: aggregate attendance by date
-  success(res, [])
-}
-
-const getDepartmentChart = async (req, res) => {
-  const data = await Employee.aggregate([
-    { $match: { status: 'active' } },
-    { $group: { _id: '$department', count: { $sum: 1 } } },
-    { $lookup: { from: 'departments', localField: '_id', foreignField: '_id', as: 'dept' } },
-    { $unwind: { path: '$dept', preserveNullAndEmptyArrays: true } },
-    { $project: { name: { $ifNull: ['$dept.name', 'Unassigned'] }, count: 1 } },
-  ])
+const getSummary = asyncHandler(async (req, res) => {
+  const data = await dashboardService.getSummary({
+    month: req.query.month,
+    year: req.query.year,
+    department: req.query.department,
+  })
   success(res, data)
-}
+})
 
-const getAlerts = async (req, res) => {
-  // TODO: return real alerts (expired contracts, pending leaves, etc.)
-  success(res, [])
-}
+const getStats = asyncHandler(async (req, res) => {
+  success(res, await dashboardService.getStats())
+})
 
-module.exports = { getStats, getSalaryChart, getAttendanceChart, getDepartmentChart, getAlerts }
+const getSalaryChart = asyncHandler(async (req, res) => {
+  success(res, await dashboardService.getSalaryChart(req.query))
+})
+
+const getAttendanceChart = asyncHandler(async (req, res) => {
+  success(res, await dashboardService.getAttendanceChart(req.query))
+})
+
+const getDepartmentChart = asyncHandler(async (req, res) => {
+  success(res, await dashboardService.getDepartmentChart())
+})
+
+const getAlerts = asyncHandler(async (req, res) => {
+  const now = new Date()
+  const month = req.query.month ? Number(req.query.month) : now.getMonth() + 1
+  const year = req.query.year ? Number(req.query.year) : now.getFullYear()
+  const start = new Date(year, month - 1, 1)
+  const end = new Date(year, month, 0, 23, 59, 59)
+  success(res, await dashboardService.buildAlerts(start, end))
+})
+
+module.exports = {
+  getSummary,
+  getStats,
+  getSalaryChart,
+  getAttendanceChart,
+  getDepartmentChart,
+  getAlerts,
+}
