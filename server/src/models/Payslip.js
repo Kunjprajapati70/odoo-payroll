@@ -54,6 +54,10 @@ const payslipTotalsSchema = new mongoose.Schema(
 
 const payslipSchema = new mongoose.Schema(
   {
+    payslipNumber: {
+      type: String,
+      trim: true
+    },
     payrunId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Payrun',

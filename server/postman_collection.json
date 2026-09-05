@@ -1,0 +1,390 @@
+{
+  "info": {
+    "name": "PeoplePay360 HR & Payroll API Collection",
+    "description": "Complete Postman collection covering AUTH, EMPLOYEES, CONTRACTS, SCHEDULES, ATTENDANCE, TIME OFF, SALARY, PAYRUN, PAYSLIP, and DASHBOARD.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "adminToken", "value": "" },
+    { "key": "empToken", "value": "" },
+    { "key": "employeeId", "value": "" },
+    { "key": "scheduleId", "value": "" },
+    { "key": "salaryStructureId", "value": "" },
+    { "key": "contractId", "value": "" },
+    { "key": "leaveTypeId", "value": "" },
+    { "key": "payrunId", "value": "" },
+    { "key": "payslipId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "2. AUTH",
+      "item": [
+        {
+          "name": "Login as Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@peoplepay360.com\",\n  \"password\": \"Admin@123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login as Employee",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee@peoplepay360.com\",\n  \"password\": \"Employee@123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Current Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. EMPLOYEES",
+      "item": [
+        {
+          "name": "List Employees",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/employees?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["employees"] }
+          }
+        },
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeCode\": \"EMP101\",\n  \"firstName\": \"Sunita\",\n  \"lastName\": \"Rao\",\n  \"email\": \"sunita.rao@peoplepay360.com\",\n  \"department\": \"Engineering\",\n  \"jobPosition\": \"Tech Lead\",\n  \"employeeType\": \"FULL_TIME\",\n  \"status\": \"ACTIVE\",\n  \"bankDetails\": {\n    \"accountNumber\": \"123456789012\",\n    \"ifscCode\": \"HDFC0001234\",\n    \"bankName\": \"HDFC\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/employees", "host": ["{{baseUrl}}"], "path": ["employees"] }
+          }
+        },
+        {
+          "name": "Get Employee By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/employees/{{employeeId}}", "host": ["{{baseUrl}}"], "path": ["employees", "{{employeeId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. SCHEDULES",
+      "item": [
+        {
+          "name": "List Schedules",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/schedules", "host": ["{{baseUrl}}"], "path": ["schedules"] }
+          }
+        },
+        {
+          "name": "Create Working Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General 40h Shift\",\n  \"code\": \"GEN_40H\",\n  \"hoursPerDay\": 8,\n  \"workingDaysPerWeek\": 5,\n  \"weeklyHours\": 40,\n  \"lines\": [\n    { \"dayOfWeek\": 1, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"breakMinutes\": 60 },\n    { \"dayOfWeek\": 2, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"breakMinutes\": 60 },\n    { \"dayOfWeek\": 3, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"breakMinutes\": 60 },\n    { \"dayOfWeek\": 4, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"breakMinutes\": 60 },\n    { \"dayOfWeek\": 5, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"breakMinutes\": 60 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/schedules", "host": ["{{baseUrl}}"], "path": ["schedules"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. SALARY RULES & STRUCTURES",
+      "item": [
+        {
+          "name": "Create Basic Salary Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Basic Pay\",\n  \"code\": \"BASIC\",\n  \"category\": \"BASIC\",\n  \"sequence\": 10,\n  \"calculationType\": \"PERCENTAGE\",\n  \"baseCode\": \"contract.salary\",\n  \"value\": 50\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/salary-rules", "host": ["{{baseUrl}}"], "path": ["salary-rules"] }
+          }
+        },
+        {
+          "name": "Create Net Salary Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Net Takehome\",\n  \"code\": \"NET\",\n  \"category\": \"NET\",\n  \"sequence\": 20,\n  \"calculationType\": \"FORMULA\",\n  \"formula\": \"BASIC\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/salary-rules", "host": ["{{baseUrl}}"], "path": ["salary-rules"] }
+          }
+        },
+        {
+          "name": "Create Salary Structure",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Executive Salary Structure\",\n  \"code\": \"EXEC_STRUCT\",\n  \"ruleIds\": [\"<basic_rule_id>\", \"<net_rule_id>\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/salary-structures", "host": ["{{baseUrl}}"], "path": ["salary-structures"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. CONTRACTS",
+      "item": [
+        {
+          "name": "Create Contract",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2026-07-01T00:00:00.000Z\",\n  \"department\": \"Engineering\",\n  \"jobPosition\": \"Tech Lead\",\n  \"salary\": 90000,\n  \"salaryStructureId\": \"{{salaryStructureId}}\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/contracts", "host": ["{{baseUrl}}"], "path": ["contracts"] }
+          }
+        },
+        {
+          "name": "Find Applicable Contract",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/applicable?employeeId={{employeeId}}&periodStart=2026-07-01&periodEnd=2026-07-31", "host": ["{{baseUrl}}"], "path": ["contracts", "applicable"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. ATTENDANCE",
+      "item": [
+        {
+          "name": "Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{empToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-15T00:00:00.000Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/attendance/check-in", "host": ["{{baseUrl}}"], "path": ["attendance", "check-in"] }
+          }
+        },
+        {
+          "name": "Check-out",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{empToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-15T00:00:00.000Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/attendance/check-out", "host": ["{{baseUrl}}"], "path": ["attendance", "check-out"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. TIME OFF",
+      "item": [
+        {
+          "name": "Create Leave Allocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"timeOffTypeId\": \"{{leaveTypeId}}\",\n  \"allocated\": 18,\n  \"validFrom\": \"2026-01-01T00:00:00.000Z\",\n  \"validTo\": \"2026-12-31T23:59:59.000Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/leave-allocations", "host": ["{{baseUrl}}"], "path": ["leave-allocations"] }
+          }
+        },
+        {
+          "name": "Submit Leave Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{empToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"timeOffTypeId\": \"{{leaveTypeId}}\",\n  \"startDate\": \"2026-07-20T00:00:00.000Z\",\n  \"endDate\": \"2026-07-21T23:59:59.000Z\",\n  \"duration\": 2,\n  \"reason\": \"Vacation\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/leave-requests", "host": ["{{baseUrl}}"], "path": ["leave-requests"] }
+          }
+        },
+        {
+          "name": "Approve Leave Request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/leave-requests/<leave_id>/approve", "host": ["{{baseUrl}}"], "path": ["leave-requests", "<leave_id>", "approve"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. PAYRUN & PAYSLIP",
+      "item": [
+        {
+          "name": "Step 1: Preview Payrun",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salaryStructureId\": \"{{salaryStructureId}}\",\n  \"periodStart\": \"2026-07-01T00:00:00.000Z\",\n  \"periodEnd\": \"2026-07-31T23:59:59.000Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payruns/preview", "host": ["{{baseUrl}}"], "path": ["payruns", "preview"] }
+          }
+        },
+        {
+          "name": "Step 2: Create DRAFT Payrun",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"July 2026 Payroll\",\n  \"salaryStructureId\": \"{{salaryStructureId}}\",\n  \"periodStart\": \"2026-07-01T00:00:00.000Z\",\n  \"periodEnd\": \"2026-07-31T23:59:59.000Z\",\n  \"employeeIds\": [\"{{employeeId}}\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payruns", "host": ["{{baseUrl}}"], "path": ["payruns"] }
+          }
+        },
+        {
+          "name": "Compute Payrun (DRAFT -> COMPUTED)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payruns/{{payrunId}}/compute", "host": ["{{baseUrl}}"], "path": ["payruns", "{{payrunId}}", "compute"] }
+          }
+        },
+        {
+          "name": "Validate Payrun (COMPUTED -> VALIDATED)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payruns/{{payrunId}}/validate", "host": ["{{baseUrl}}"], "path": ["payruns", "{{payrunId}}", "validate"] }
+          }
+        },
+        {
+          "name": "Mark Payrun Paid (VALIDATED -> PAID)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payruns/{{payrunId}}/pay", "host": ["{{baseUrl}}"], "path": ["payruns", "{{payrunId}}", "pay"] }
+          }
+        },
+        {
+          "name": "Download Payslip PDF",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payslips/{{payslipId}}/pdf", "host": ["{{baseUrl}}"], "path": ["payslips", "{{payslipId}}", "pdf"] }
+          }
+        },
+        {
+          "name": "Send Individual Payslip Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payslips/{{payslipId}}/email", "host": ["{{baseUrl}}"], "path": ["payslips", "{{payslipId}}", "email"] }
+          }
+        },
+        {
+          "name": "Send Bulk Payrun Emails",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payruns/{{payrunId}}/send-payslips", "host": ["{{baseUrl}}"], "path": ["payruns", "{{payrunId}}", "send-payslips"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. DASHBOARD",
+      "item": [
+        {
+          "name": "Get Consolidated Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard", "host": ["{{baseUrl}}"], "path": ["dashboard"] }
+          }
+        },
+        {
+          "name": "Get Dashboard Filtered by Period & Department",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard?department=Engineering&periodStart=2026-07-01&periodEnd=2026-07-31", "host": ["{{baseUrl}}"], "path": ["dashboard"] }
+          }
+        }
+      ]
+    }
+  ]
+}
