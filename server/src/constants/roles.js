@@ -1,0 +1,14 @@
+const ROLES = {
+  EMPLOYEE: 'EMPLOYEE',
+  HR_MANAGER: 'HR_MANAGER',
+  PAYROLL_USER: 'PAYROLL_USER',
+  PAYROLL_MANAGER: 'PAYROLL_MANAGER',
+  ADMIN: 'ADMIN'
+};
+
+const ALL_ROLES = Object.values(ROLES);
+
+module.exports = {
+  ROLES,
+  ALL_ROLES
+};
