@@ -33,16 +33,21 @@ export const TIME_OFF_STATUSES = {
 
 export const PAYRUN_STATUSES = {
   DRAFT:      'draft',
-  PROCESSING: 'processing',
-  DONE:       'done',
-  APPROVED:   'approved',
+  COMPUTED:   'computed',
+  VALIDATED:  'validated',
+  PAID:       'paid',
   CANCELLED:  'cancelled',
+  // legacy aliases kept for any older records
+  PROCESSING: 'computed',
+  DONE:       'computed',
+  APPROVED:   'validated',
 }
 
 export const SALARY_RULE_TYPES = {
   BASIC: 'basic',
   ALLOWANCE: 'allowance',
   DEDUCTION: 'deduction',
+  NET: 'net',
 }
 
 export const PAGINATION_LIMIT = 20

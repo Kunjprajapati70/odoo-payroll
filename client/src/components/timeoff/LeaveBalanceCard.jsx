@@ -10,8 +10,8 @@ export default function LeaveBalanceCard({ allocation }) {
     <div className="card p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: allocation.leaveType?.color || '#4f46e5' }} />
-          <span className="text-sm font-medium text-gray-800">{allocation.leaveType?.name || 'Leave'}</span>
+          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: allocation.timeOffType?.color || allocation.leaveType?.color || '#4f46e5' }} />
+          <span className="text-sm font-medium text-gray-800">{allocation.timeOffType?.name || allocation.leaveType?.name || 'Leave'}</span>
         </div>
         <span className="text-xs text-gray-500">{allocation.year}</span>
       </div>

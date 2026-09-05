@@ -16,9 +16,9 @@ import { formatDate, formatFullName } from '../../utils/formatters'
 function AllocationForm({ initial, employees, types, onSubmit, loading, onClose }) {
   const [form, setForm] = useState({
     employee: initial?.employee?._id || initial?.employee || '',
-    leaveType: initial?.leaveType?._id || initial?.leaveType || '',
+    leaveType: initial?.timeOffType?._id || initial?.timeOffType || initial?.leaveType?._id || initial?.leaveType || '',
     year: initial?.year || new Date().getFullYear(),
-    allocatedDays: initial?.allocatedDays || '',
+    allocatedDays: initial?.allocatedDays ?? initial?.totalDays ?? '',
     usedDays: initial?.usedDays || 0,
   })
   const [errors, setErrors] = useState({})
@@ -29,10 +29,17 @@ function AllocationForm({ initial, employees, types, onSubmit, loading, onClose 
     const errs = {}
     if (!form.employee) errs.employee = 'Required'
     if (!form.leaveType) errs.leaveType = 'Required'
-    if (!form.allocatedDays) errs.allocatedDays = 'Required'
+    if (!form.allocatedDays && form.allocatedDays !== 0) errs.allocatedDays = 'Required'
     setErrors(errs)
     if (Object.keys(errs).length) return
-    onSubmit({ ...form, allocatedDays: Number(form.allocatedDays), year: Number(form.year) })
+    onSubmit({
+      employee: form.employee,
+      timeOffType: form.leaveType,
+      year: Number(form.year),
+      allocatedDays: Number(form.allocatedDays),
+      totalDays: Number(form.allocatedDays),
+      usedDays: Number(form.usedDays) || 0,
+    })
   }
 
   return (
@@ -116,14 +123,15 @@ export default function TimeOffAllocations() {
       key: 'employee', label: 'Employee',
       render: r => <span className="font-medium text-gray-900">{formatFullName(r.employee) || '—'}</span>
     },
-    { key: 'leaveType', label: 'Leave Type', render: r => <span className="text-sm">{r.leaveType?.name || r.leaveType || '—'}</span> },
+    { key: 'leaveType', label: 'Leave Type', render: r => <span className="text-sm">{r.timeOffType?.name || r.leaveType?.name || r.leaveType || '—'}</span> },
     { key: 'year', label: 'Year', render: r => <span className="text-sm">{r.year}</span> },
-    { key: 'allocatedDays', label: 'Allocated', render: r => <span className="text-sm font-medium">{r.allocatedDays} days</span> },
+    { key: 'allocatedDays', label: 'Allocated', render: r => <span className="text-sm font-medium">{r.allocatedDays ?? r.totalDays} days</span> },
     { key: 'usedDays', label: 'Used', render: r => <span className="text-sm text-orange-600">{r.usedDays || 0} days</span> },
     {
       key: 'remaining', label: 'Remaining',
       render: r => {
-        const rem = (r.allocatedDays || 0) - (r.usedDays || 0)
+        const allocated = r.allocatedDays ?? r.totalDays ?? 0
+        const rem = r.remainingDays != null ? r.remainingDays : allocated - (r.usedDays || 0)
         return <span className={`text-sm font-medium ${rem > 0 ? 'text-green-600' : 'text-red-500'}`}>{rem} days</span>
       }
     },

@@ -2,12 +2,12 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import MainLayout from '../components/layout/MainLayout'
 
-// Auth pages
 import Login from '../pages/auth/Login'
 import ForgotPassword from '../pages/auth/ForgotPassword'
+import ResetPassword from '../pages/auth/ResetPassword'
 
-// App pages
 import Dashboard from '../pages/dashboard/Dashboard'
+import Users from '../pages/users/Users'
 import Employees from '../pages/employees/Employees'
 import EmployeeDetails from '../pages/employees/EmployeeDetails'
 import EmployeeFormPage from '../pages/employees/EmployeeFormPage'
@@ -26,42 +26,57 @@ import Payslips from '../pages/payroll/Payslips'
 import PayslipDetails from '../pages/payroll/PayslipDetails'
 import Reports from '../pages/reports/Reports'
 import Settings from '../pages/settings/Settings'
+import { ROLES } from '../utils/constants'
+import { useAuth } from '../hooks/useAuth'
+
+function AdminOnly({ children }) {
+  const { user } = useAuth()
+  if (user?.role !== ROLES.ADMIN) return <Navigate to="/dashboard" replace />
+  return children
+}
+
+function StaffOnly({ children }) {
+  const { user } = useAuth()
+  if (user?.role === ROLES.EMPLOYEE) return <Navigate to="/dashboard" replace />
+  return children
+}
 
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Public */}
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Protected */}
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/employees/new" element={<EmployeeFormPage />} />
-          <Route path="/employees/:id" element={<EmployeeDetails />} />
-          <Route path="/employees/:id/edit" element={<EmployeeFormPage />} />
+          <Route path="/users" element={<AdminOnly><Users /></AdminOnly>} />
 
-          <Route path="/departments" element={<Departments />} />
-          <Route path="/contracts" element={<Contracts />} />
-          <Route path="/schedules" element={<Schedules />} />
+          <Route path="/employees" element={<StaffOnly><Employees /></StaffOnly>} />
+          <Route path="/employees/new" element={<StaffOnly><EmployeeFormPage /></StaffOnly>} />
+          <Route path="/employees/:id" element={<StaffOnly><EmployeeDetails /></StaffOnly>} />
+          <Route path="/employees/:id/edit" element={<StaffOnly><EmployeeFormPage /></StaffOnly>} />
+
+          <Route path="/departments" element={<StaffOnly><Departments /></StaffOnly>} />
+          <Route path="/contracts" element={<StaffOnly><Contracts /></StaffOnly>} />
+          <Route path="/schedules" element={<StaffOnly><Schedules /></StaffOnly>} />
           <Route path="/attendance" element={<Attendance />} />
 
-          <Route path="/time-off/types" element={<TimeOffTypes />} />
-          <Route path="/time-off/allocations" element={<TimeOffAllocations />} />
+          <Route path="/time-off/types" element={<StaffOnly><TimeOffTypes /></StaffOnly>} />
+          <Route path="/time-off/allocations" element={<StaffOnly><TimeOffAllocations /></StaffOnly>} />
           <Route path="/time-off/requests" element={<TimeOffRequests />} />
 
-          <Route path="/payroll/structures" element={<SalaryStructures />} />
-          <Route path="/payroll/rules" element={<SalaryRules />} />
-          <Route path="/payroll/payruns" element={<Payruns />} />
-          <Route path="/payroll/payruns/new" element={<CreatePayrun />} />
+          <Route path="/payroll/structures" element={<StaffOnly><SalaryStructures /></StaffOnly>} />
+          <Route path="/payroll/rules" element={<StaffOnly><SalaryRules /></StaffOnly>} />
+          <Route path="/payroll/payruns" element={<StaffOnly><Payruns /></StaffOnly>} />
+          <Route path="/payroll/payruns/new" element={<StaffOnly><CreatePayrun /></StaffOnly>} />
           <Route path="/payroll/payslips" element={<Payslips />} />
           <Route path="/payroll/payslips/:id" element={<PayslipDetails />} />
 
-          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports" element={<StaffOnly><Reports /></StaffOnly>} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>

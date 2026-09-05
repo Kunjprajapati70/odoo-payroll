@@ -19,15 +19,24 @@ const categoryColors = {
   basic: 'bg-blue-100 text-blue-700',
   allowance: 'bg-green-100 text-green-700',
   deduction: 'bg-red-100 text-red-700',
+  net: 'bg-purple-100 text-purple-700',
+  tax: 'bg-red-100 text-red-700',
 }
 
 function RuleForm({ initial, onSubmit, loading, onClose }) {
+  const normalizeCalcType = (t) => {
+    if (!t) return 'fixed'
+    if (String(t).includes('percentage')) return 'percentage'
+    if (t === 'formula') return 'formula'
+    return 'fixed'
+  }
+
   const [form, setForm] = useState({
     name: initial?.name || '',
     code: initial?.code || '',
-    category: initial?.category || SALARY_RULE_TYPES.ALLOWANCE,
-    sequence: initial?.sequence || 10,
-    calculationType: initial?.calculationType || 'fixed',
+    category: initial?.category === 'tax' ? 'deduction' : (initial?.category || SALARY_RULE_TYPES.ALLOWANCE),
+    sequence: initial?.sequence || '',
+    calculationType: normalizeCalcType(initial?.calculationType || initial?.computationType),
     amount: initial?.amount || '',
     percentage: initial?.percentage || '',
     formula: initial?.formula || '',
@@ -44,15 +53,28 @@ function RuleForm({ initial, onSubmit, loading, onClose }) {
     const errs = {}
     if (!form.name.trim()) errs.name = 'Required'
     if (!form.code.trim()) errs.code = 'Required'
-    if (form.calculationType === 'fixed' && !form.amount) errs.amount = 'Required'
-    if (form.calculationType === 'percentage' && !form.percentage) errs.percentage = 'Required'
+    if (form.calculationType === 'fixed' && form.amount !== '' && form.amount != null) {
+      if (Number(form.amount) < 0) errs.amount = 'Amount cannot be negative'
+      if (form.category === 'basic' && Number(form.amount) < 0) errs.amount = 'Basic salary must be positive'
+    }
+    if (form.calculationType === 'fixed' && !form.amount && form.amount !== 0) errs.amount = 'Required'
+    if (form.calculationType === 'percentage' && !form.percentage && form.percentage !== 0) errs.percentage = 'Required'
+    if (form.calculationType === 'percentage' && Number(form.percentage) < 0) errs.percentage = 'Must be positive'
     if (form.calculationType === 'formula' && !form.formula) errs.formula = 'Required'
     setErrors(errs)
     if (Object.keys(errs).length) return
-    const payload = { ...form, sequence: Number(form.sequence) }
-    if (form.calculationType === 'fixed') { payload.amount = Number(form.amount); delete payload.percentage; delete payload.formula }
-    if (form.calculationType === 'percentage') { payload.percentage = Number(form.percentage); delete payload.amount; delete payload.formula }
-    if (form.calculationType === 'formula') { delete payload.amount; delete payload.percentage }
+    const payload = {
+      name: form.name,
+      code: form.code,
+      category: form.category,
+      sequence: Number(form.sequence),
+      description: form.description,
+      calculationType: form.calculationType,
+      computationType: form.calculationType === 'percentage' ? 'percentage_of_basic' : form.calculationType,
+    }
+    if (form.calculationType === 'fixed') payload.amount = Number(form.amount)
+    if (form.calculationType === 'percentage') payload.percentage = Number(form.percentage)
+    if (form.calculationType === 'formula') payload.formula = form.formula
     onSubmit(payload)
   }
 
@@ -68,7 +90,7 @@ function RuleForm({ initial, onSubmit, loading, onClose }) {
         </div>
         {form.calculationType === 'fixed' && (
           <div className="col-span-2">
-            <Input label="Amount *" type="number" value={form.amount} onChange={set('amount')} error={errors.amount} placeholder="0.00" />
+            <Input label="Amount *" type="number" min="0" step="0.01" value={form.amount} onChange={set('amount')} error={errors.amount} placeholder="Positive amount (0 = use contract wage for BASIC)" />
           </div>
         )}
         {form.calculationType === 'percentage' && (
@@ -168,8 +190,8 @@ export default function SalaryRules() {
 
   const columns = [
     {
-      key: 'seq', label: '#',
-      render: r => <span className="text-xs text-gray-500 font-mono">{r.sequence || '—'}</span>
+      key: 'seq', label: 'ID',
+      render: r => <span className="text-sm text-gray-800 font-medium">{r.sequence ?? '—'}</span>
     },
     {
       key: 'name', label: 'Rule',
@@ -190,16 +212,22 @@ export default function SalaryRules() {
     },
     {
       key: 'calculation', label: 'Calculation',
-      render: r => (
-        <div className="text-sm">
-          <span className="text-gray-600 capitalize">{r.calculationType}</span>
-          <span className="text-gray-800 ml-2">
-            {r.calculationType === 'fixed' && r.amount != null && `$${r.amount}`}
-            {r.calculationType === 'percentage' && r.percentage != null && `${r.percentage}%`}
-            {r.calculationType === 'formula' && <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{r.formula}</code>}
-          </span>
-        </div>
-      )
+      render: r => {
+        const calc = r.calculationType || r.computationType || ''
+        const isPct = String(calc).includes('percentage')
+        const isFixed = calc === 'fixed'
+        const isFormula = calc === 'formula'
+        return (
+          <div className="text-sm">
+            <span className="text-gray-600 capitalize">{isPct ? 'percentage' : calc}</span>
+            <span className="text-gray-800 ml-2">
+              {isFixed && r.amount != null && `₹${Number(r.amount).toLocaleString('en-IN')}`}
+              {isPct && r.percentage != null && `${r.percentage}%`}
+              {isFormula && <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{r.formula}</code>}
+            </span>
+          </div>
+        )
+      }
     },
     {
       key: 'actions', label: '', width: 80,

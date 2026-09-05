@@ -25,10 +25,13 @@ export default function Employees() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [filters, setFilters] = useState({ search: '', department: '', status: '' })
+  const [appliedSearch, setAppliedSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
-  const [viewMode, setViewMode] = useState('table') // 'table' | 'grid'
+  const [viewMode, setViewMode] = useState('table')
   const debouncedSearch = useDebounce(filters.search)
+
+  useEffect(() => { setAppliedSearch(debouncedSearch) }, [debouncedSearch])
 
   const fetchEmployees = useCallback(async () => {
     setLoading(true)
@@ -37,7 +40,7 @@ export default function Employees() {
       const res = await employeeService.getAll({
         page,
         limit: 20,
-        search: debouncedSearch || undefined,
+        search: appliedSearch || undefined,
         department: filters.department || undefined,
         status: filters.status || undefined,
       })
@@ -49,7 +52,7 @@ export default function Employees() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, filters.department, filters.status])
+  }, [page, appliedSearch, filters.department, filters.status])
 
   useEffect(() => {
     departmentService.getAll().then(res => {
@@ -59,7 +62,7 @@ export default function Employees() {
 
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, filters.department, filters.status])
+  }, [appliedSearch, filters.department, filters.status])
 
   useEffect(() => { fetchEmployees() }, [fetchEmployees])
 
@@ -119,7 +122,12 @@ export default function Employees() {
       />
 
       <div className="card">
-        <EmployeeFilters filters={filters} onChange={setFilters} departments={departments} />
+        <EmployeeFilters
+          filters={filters}
+          onChange={setFilters}
+          departments={departments}
+          onSearchSubmit={() => setAppliedSearch(filters.search)}
+        />
         {viewMode === 'table' ? (
           <EmployeeTable data={employees} loading={loading} onDelete={setDeleteTarget} />
         ) : (

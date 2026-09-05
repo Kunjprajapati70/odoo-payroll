@@ -1,5 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import Skeleton from '../common/Skeleton'
+import { formatCurrency } from '../../utils/formatters'
 
 export default function SalaryChart({ data = [], loading }) {
   return (
@@ -13,7 +14,7 @@ export default function SalaryChart({ data = [], loading }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(v) => `$${v?.toLocaleString()}`} />
+            <Tooltip formatter={(v) => formatCurrency(v)} />
             <Bar dataKey="total" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Salary" />
           </BarChart>
         </ResponsiveContainer>

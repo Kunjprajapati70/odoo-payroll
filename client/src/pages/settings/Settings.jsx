@@ -6,6 +6,7 @@ import Input from '../../components/common/Input'
 import { AppContext } from '../../context/AppContext'
 import { useAuth } from '../../hooks/useAuth'
 import { authService } from '../../services/authService'
+import { isValidPhone, isRequired, normalizePhone, minLength } from '../../utils/validators'
 
 const TABS = [
   { id: 'profile',       label: 'Profile',       icon: User },
@@ -26,12 +27,23 @@ function ProfileTab({ user, addToast }) {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (!isRequired(form.name)) {
+      addToast('Name is required', 'error')
+      return
+    }
+    if (form.phone && !isValidPhone(form.phone)) {
+      addToast('Phone must be exactly 10 digits', 'error')
+      return
+    }
     setSaving(true)
     try {
-      await authService.me()        // swap for profile-update endpoint when available
+      await authService.updateProfile({
+        name: form.name.trim(),
+        phone: form.phone ? normalizePhone(form.phone) : '',
+      })
       addToast('Profile updated', 'success')
-    } catch {
-      addToast('Failed to update profile', 'error')
+    } catch (err) {
+      addToast(err?.response?.data?.message || 'Failed to update profile', 'error')
     } finally {
       setSaving(false)
     }
@@ -52,7 +64,7 @@ function ProfileTab({ user, addToast }) {
 
       <Input label="Full Name"    value={form.name}  onChange={set('name')}  placeholder="Your name" />
       <Input label="Email"        type="email" value={form.email} onChange={set('email')} disabled />
-      <Input label="Phone"        value={form.phone} onChange={set('phone')} placeholder="+1 234 567 8900" />
+      <Input label="Phone (10 digits)" value={form.phone} onChange={set('phone')} placeholder="9876543210" maxLength={14} />
 
       <Button type="submit" loading={saving}>Save Changes</Button>
     </form>
@@ -71,17 +83,17 @@ function SecurityTab({ addToast }) {
     const errs = {}
     if (!form.current) errs.current = 'Required'
     if (!form.next)    errs.next = 'Required'
-    else if (form.next.length < 8) errs.next = 'Minimum 8 characters'
+    else if (!minLength(form.next, 6)) errs.next = 'Minimum 6 characters'
     if (form.next !== form.confirm) errs.confirm = 'Passwords do not match'
     setErrors(errs)
     if (Object.keys(errs).length) return
     setSaving(true)
     try {
-      await authService.me()        // swap for change-password endpoint when available
+      await authService.changePassword(form.current, form.next)
       addToast('Password changed', 'success')
       setForm({ current: '', next: '', confirm: '' })
-    } catch {
-      addToast('Failed to change password', 'error')
+    } catch (err) {
+      addToast(err?.response?.data?.message || 'Failed to change password', 'error')
     } finally {
       setSaving(false)
     }

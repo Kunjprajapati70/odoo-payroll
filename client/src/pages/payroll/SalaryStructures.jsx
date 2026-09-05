@@ -17,7 +17,7 @@ function StructureForm({ initial, rules, onSubmit, loading, onClose }) {
   const [form, setForm] = useState({
     name: initial?.name || '',
     code: initial?.code || '',
-    currency: initial?.currency || 'USD',
+    currency: initial?.currency || 'INR',
     scheduleOf: initial?.scheduleOf || 'monthly',
     rules: initial?.rules?.map(r => r._id || r) || [],
     description: initial?.description || '',
@@ -25,7 +25,7 @@ function StructureForm({ initial, rules, onSubmit, loading, onClose }) {
   const [errors, setErrors] = useState({})
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
   const scheduleOptions = ['monthly', 'bi-monthly', 'weekly']
-  const currencies = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD']
+  const currencies = ['INR', 'USD', 'EUR', 'GBP', 'CAD', 'AUD']
 
   const toggleRule = (ruleId) => {
     setForm(f => ({
@@ -207,7 +207,7 @@ export default function SalaryStructures() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-xs capitalize px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-600">{r.category}</span>
-                            <span className="text-xs text-gray-600">{r.calculationType === 'fixed' ? `$${r.amount}` : r.calculationType === 'percentage' ? `${r.percentage}%` : 'Formula'}</span>
+                            <span className="text-xs text-gray-600">{r.calculationType === 'fixed' || r.computationType === 'fixed' ? `₹${Number(r.amount || 0).toLocaleString('en-IN')}` : (r.calculationType === 'percentage' || r.computationType?.includes('percentage')) ? `${r.percentage}%` : 'Formula'}</span>
                           </div>
                         </div>
                       )

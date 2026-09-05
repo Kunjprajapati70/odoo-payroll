@@ -15,6 +15,7 @@ export const timeOffService = {
   // Requests
   getRequests: (params) => api.get('/time-off/requests', { params }).then(r => r.data),
   createRequest: (data) => api.post('/time-off/requests', data).then(r => r.data),
+  updateRequest: (id, data) => api.put(`/time-off/requests/${id}`, data).then(r => r.data),
   approveRequest: (id) => api.put(`/time-off/requests/${id}/approve`).then(r => r.data),
   rejectRequest: (id, reason) => api.put(`/time-off/requests/${id}/reject`, { reason }).then(r => r.data),
 }
