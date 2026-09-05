@@ -21,6 +21,7 @@ const payrunSchema = new mongoose.Schema({
   approvedBy:      { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedAt:      { type: Date },
   paidAt:          { type: Date },
+  paidNotifySentAt:{ type: Date },
   notes:           { type: String },
 }, { timestamps: true })
 

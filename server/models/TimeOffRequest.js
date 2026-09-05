@@ -13,6 +13,12 @@ const timeOffRequestSchema = new mongoose.Schema({
   approvedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   rejectionReason: { type: String },
   approvedAt:  { type: Date },
+  // Duplicate email/notification protection
+  emailsSent: {
+    created: { type: Boolean, default: false },
+    approved: { type: Boolean, default: false },
+    rejected: { type: Boolean, default: false },
+  },
 }, { timestamps: true })
 
 module.exports = mongoose.model('TimeOffRequest', timeOffRequestSchema)

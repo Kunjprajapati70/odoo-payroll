@@ -82,10 +82,53 @@ const buildRequestFields = async (payload, user, { employeeOverride } = {}) => {
 
 const createRequest = async (payload, user) => {
   const fields = await buildRequestFields(payload, user)
-  return TimeOffRequest.create({
+  const created = await TimeOffRequest.create({
     ...fields,
     status: 'pending',
   })
+
+  // Email + in-app notify HR (never fail the leave create)
+  const {
+    safeNotify,
+    findHrApproverUsers,
+    createNotification,
+  } = require('./notificationService')
+  const { sendLeaveRequestEmail } = require('./emailService')
+
+  await safeNotify('leave-create', async () => {
+    const populated = await TimeOffRequest.findById(created._id)
+      .populate('employee', 'firstName lastName employeeId email')
+      .populate('timeOffType', 'name code')
+    const emp = populated.employee
+    const employeeName = emp ? `${emp.firstName} ${emp.lastName}` : 'Employee'
+    const leaveType = populated.timeOffType?.name || 'Leave'
+    const hrs = await findHrApproverUsers()
+    for (const hr of hrs) {
+      if (hr.email) {
+        await sendLeaveRequestEmail({
+          to: hr.email,
+          employeeName,
+          leaveType,
+          startDate: populated.startDate,
+          endDate: populated.endDate,
+          reason: populated.reason,
+          status: 'pending',
+        })
+      }
+      await createNotification({
+        userId: hr._id,
+        title: 'New Leave Request',
+        message: `${employeeName} requested ${leaveType} (${new Date(populated.startDate).toLocaleDateString()} – ${new Date(populated.endDate).toLocaleDateString()})`,
+        type: 'leave',
+        metadata: { requestId: String(populated._id), employeeId: String(emp?._id || '') },
+      })
+    }
+    if (!created.emailsSent) created.emailsSent = {}
+    created.emailsSent.created = true
+    await created.save()
+  })
+
+  return created
 }
 
 /**
@@ -178,11 +221,53 @@ const approveRequest = async (requestId, approverUser) => {
   request.approvedAt = new Date()
   await request.save()
 
-  return request.populate([
-    { path: 'employee', select: 'firstName lastName employeeId' },
+  const populated = await request.populate([
+    { path: 'employee', select: 'firstName lastName employeeId email user' },
     { path: 'timeOffType', select: 'name code' },
     { path: 'approvedBy', select: 'name email' },
   ])
+
+  if (!request.emailsSent?.approved) {
+    const {
+      safeNotify,
+      findUserForEmployee,
+      createNotification,
+    } = require('./notificationService')
+    const { sendLeaveStatusEmail } = require('./emailService')
+
+    await safeNotify('leave-approve', async () => {
+      const emp = populated.employee
+      const employeeName = emp ? `${emp.firstName} ${emp.lastName}` : 'Employee'
+      const leaveType = populated.timeOffType?.name || 'Leave'
+      const empUser = await findUserForEmployee(emp?._id)
+      const to = emp?.email || empUser?.email
+      if (to) {
+        await sendLeaveStatusEmail({
+          to,
+          approved: true,
+          employeeName,
+          leaveType,
+          startDate: populated.startDate,
+          endDate: populated.endDate,
+          comment: '',
+        })
+      }
+      if (empUser?._id) {
+        await createNotification({
+          userId: empUser._id,
+          title: 'Leave Approved',
+          message: `Your ${leaveType} request was approved.`,
+          type: 'leave',
+          metadata: { requestId: String(populated._id) },
+        })
+      }
+      request.emailsSent = request.emailsSent || {}
+      request.emailsSent.approved = true
+      await request.save()
+    })
+  }
+
+  return populated
 }
 
 const rejectRequest = async (requestId, reason, approverUser) => {
@@ -204,7 +289,52 @@ const rejectRequest = async (requestId, reason, approverUser) => {
   request.approvedBy = approverUser._id
   request.approvedAt = new Date()
   await request.save()
-  return request
+
+  const populated = await TimeOffRequest.findById(request._id)
+    .populate('employee', 'firstName lastName employeeId email user')
+    .populate('timeOffType', 'name code')
+
+  if (!request.emailsSent?.rejected) {
+    const {
+      safeNotify,
+      findUserForEmployee,
+      createNotification,
+    } = require('./notificationService')
+    const { sendLeaveStatusEmail } = require('./emailService')
+
+    await safeNotify('leave-reject', async () => {
+      const emp = populated.employee
+      const employeeName = emp ? `${emp.firstName} ${emp.lastName}` : 'Employee'
+      const leaveType = populated.timeOffType?.name || 'Leave'
+      const empUser = await findUserForEmployee(emp?._id)
+      const to = emp?.email || empUser?.email
+      if (to) {
+        await sendLeaveStatusEmail({
+          to,
+          approved: false,
+          employeeName,
+          leaveType,
+          startDate: populated.startDate,
+          endDate: populated.endDate,
+          reason: request.rejectionReason,
+        })
+      }
+      if (empUser?._id) {
+        await createNotification({
+          userId: empUser._id,
+          title: 'Leave Rejected',
+          message: `Your ${leaveType} request was rejected.${request.rejectionReason ? ` Reason: ${request.rejectionReason}` : ''}`,
+          type: 'leave',
+          metadata: { requestId: String(populated._id) },
+        })
+      }
+      request.emailsSent = request.emailsSent || {}
+      request.emailsSent.rejected = true
+      await request.save()
+    })
+  }
+
+  return populated
 }
 
 module.exports = {

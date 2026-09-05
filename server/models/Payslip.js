@@ -22,6 +22,7 @@ const payslipSchema = new mongoose.Schema({
     amount: Number,
     sequence: Number,
   }],
+  emailSentAt:     { type: Date },
 }, { timestamps: true })
 
 payslipSchema.index({ payrun: 1, employee: 1 }, { unique: true })

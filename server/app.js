@@ -18,6 +18,7 @@ const salaryRuleRoutes = require('./routes/salaryRuleRoutes')
 const payrunRoutes = require('./routes/payrunRoutes')
 const payslipRoutes = require('./routes/payslipRoutes')
 const dashboardRoutes = require('./routes/dashboardRoutes')
+const notificationRoutes = require('./routes/notificationRoutes')
 
 const app = express()
 
@@ -52,6 +53,7 @@ app.use('/api/salary-rules', salaryRuleRoutes)
 app.use('/api/payruns', payrunRoutes)
 app.use('/api/payslips', payslipRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'PeoplePay360 API' }))

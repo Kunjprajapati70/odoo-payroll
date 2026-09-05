@@ -157,6 +157,53 @@ const markPaid = async (payrunId) => {
   await payrun.save()
 
   await Payslip.updateMany({ payrun: payrun._id }, { $set: { status: 'paid' } })
+
+  // Notify employees once per payrun
+  if (!payrun.paidNotifySentAt) {
+    const {
+      safeNotify,
+      findUserForEmployee,
+      createNotification,
+    } = require('./notificationService')
+    const { sendPayrollPaidEmail } = require('./emailService')
+
+    await safeNotify('payroll-paid', async () => {
+      const slips = await Payslip.find({ payrun: payrun._id }).populate(
+        'employee',
+        'firstName lastName email employeeId user'
+      )
+      const period = `${new Date(payrun.periodStart).toLocaleDateString()} - ${new Date(payrun.periodEnd).toLocaleDateString()}`
+      for (const slip of slips) {
+        const emp = slip.employee
+        if (!emp) continue
+        const employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim()
+        const empUser = await findUserForEmployee(emp._id)
+        const to = emp.email || empUser?.email
+        if (to) {
+          await sendPayrollPaidEmail({
+            to,
+            employeeName,
+            payPeriod: period,
+            netSalary: slip.netSalary,
+            paymentStatus: 'paid',
+            paymentDate: payrun.paidAt,
+          })
+        }
+        if (empUser?._id) {
+          await createNotification({
+            userId: empUser._id,
+            title: 'Salary Payment Completed',
+            message: `Your salary for ${period} has been paid.`,
+            type: 'payroll',
+            metadata: { payrunId: String(payrun._id), payslipId: String(slip._id) },
+          })
+        }
+      }
+      payrun.paidNotifySentAt = new Date()
+      await payrun.save()
+    })
+  }
+
   return payrun
 }
 
@@ -184,11 +231,47 @@ const sendPayslips = async (payrunId) => {
     .populate('employee')
     .populate('lines')
 
+  const {
+    safeNotify,
+    findUserForEmployee,
+    createNotification,
+  } = require('./notificationService')
+
   const results = []
   for (const slip of payslips) {
     try {
-      await sendPayslipEmail(slip)
-      results.push({ payslipId: slip._id, status: 'sent' })
+      if (slip.emailSentAt) {
+        results.push({ payslipId: slip._id, status: 'skipped', message: 'Already emailed' })
+        continue
+      }
+      const emailResult = await sendPayslipEmail(slip)
+      if (emailResult.sent) {
+        slip.emailSentAt = new Date()
+        await slip.save()
+        await safeNotify('payslip-email', async () => {
+          const empUser = await findUserForEmployee(slip.employee?._id || slip.employee)
+          if (empUser?._id) {
+            const period = `${new Date(slip.periodStart).toLocaleDateString()} - ${new Date(slip.periodEnd).toLocaleDateString()}`
+            await createNotification({
+              userId: empUser._id,
+              title: 'Payslip Generated',
+              message: `Your payslip for ${period} is ready.`,
+              type: 'payslip',
+              metadata: { payslipId: String(slip._id), payrunId: String(payrun._id) },
+            })
+          }
+        })
+        results.push({
+          payslipId: slip._id,
+          status: emailResult.mocked ? 'mocked' : 'sent',
+        })
+      } else {
+        results.push({
+          payslipId: slip._id,
+          status: 'failed',
+          message: emailResult.error || 'Send failed',
+        })
+      }
     } catch (err) {
       results.push({ payslipId: slip._id, status: 'failed', message: err.message })
     }

@@ -12,6 +12,7 @@ const contractSchema = new mongoose.Schema({
   endDate:         { type: Date },
   status:          { type: String, enum: ['active', 'expired', 'terminated'], default: 'active' },
   notes:           { type: String },
+  expiryNotifiedAt:{ type: Date },
 }, { timestamps: true })
 
 contractSchema.pre('validate', function (next) {

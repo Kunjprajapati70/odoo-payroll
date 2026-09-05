@@ -152,8 +152,15 @@ export default function Users() {
         await userService.update(modal.data._id, data)
         addToast('User updated', 'success')
       } else {
-        await userService.create(data)
-        addToast('User created', 'success')
+        const createdUser = await userService.create(data)
+        const mail = createdUser?.credentialsEmail
+        if (mail?.sent && !mail?.mocked) {
+          addToast(`User created — login details sent to ${mail.to || data.email}`, 'success')
+        } else if (mail?.sent && mail?.mocked) {
+          addToast('User created (email mocked — check SMTP settings)', 'success')
+        } else {
+          addToast(`User created, but email failed${mail?.error ? `: ${mail.error}` : ''}`, 'error')
+        }
       }
       setModal(null)
       fetchUsers()

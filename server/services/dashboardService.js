@@ -238,7 +238,11 @@ const buildAlerts = async (rangeStart, rangeEnd) => {
       status: 'active',
       endDate: { $gte: new Date(), $lte: soon },
     })
-      .populate('employee', 'firstName lastName employeeId')
+      .populate({
+        path: 'employee',
+        select: 'firstName lastName employeeId department',
+        populate: { path: 'department', select: 'name' },
+      })
       .limit(10),
     TimeOffRequest.countDocuments({ status: 'pending' }),
     Department.countDocuments({ isActive: false }),
@@ -249,6 +253,49 @@ const buildAlerts = async (rangeStart, rangeEnd) => {
       type: 'contract',
       message: `Contract for ${c.employee?.firstName || ''} ${c.employee?.lastName || ''} expires on ${new Date(c.endDate).toLocaleDateString()}`,
     })
+
+    // One-time email + in-app notify for HR when contract enters the expiry window
+    if (!c.expiryNotifiedAt) {
+      try {
+        const {
+          safeNotify,
+          findHrApproverUsers,
+          createNotification,
+        } = require('./notificationService')
+        const { sendContractExpiryEmail } = require('./emailService')
+        const remainingDays = Math.max(
+          0,
+          Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24))
+        )
+        const employeeName = `${c.employee?.firstName || ''} ${c.employee?.lastName || ''}`.trim() || 'Employee'
+        await safeNotify('contract-expiry', async () => {
+          const departmentName = c.employee?.department?.name || ''
+          const hrs = await findHrApproverUsers()
+          for (const hr of hrs) {
+            if (hr.email) {
+              await sendContractExpiryEmail({
+                to: hr.email,
+                employeeName,
+                endDate: c.endDate,
+                remainingDays,
+                department: departmentName,
+              })
+            }
+            await createNotification({
+              userId: hr._id,
+              title: 'Contract Expiring',
+              message: `${employeeName}'s contract expires in ${remainingDays} day(s).`,
+              type: 'contract',
+              metadata: { contractId: String(c._id), employeeId: String(c.employee?._id || '') },
+            })
+          }
+          c.expiryNotifiedAt = new Date()
+          await c.save()
+        })
+      } catch (err) {
+        console.error('[contract-expiry-notify]', err.message)
+      }
+    }
   }
   if (pendingLeaves > 0) {
     alerts.push({

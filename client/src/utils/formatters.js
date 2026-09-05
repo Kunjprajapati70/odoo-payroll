@@ -63,3 +63,19 @@ export const formatDuration = (hours) => {
 
 export const capitalize = (str) =>
   str ? str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ') : ''
+
+/** Relative time for notification list (e.g. "2 minutes ago"). */
+export const formatRelativeTime = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
+  const sec = Math.floor((Date.now() - d.getTime()) / 1000)
+  if (sec < 60) return 'Just now'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day} day${day === 1 ? '' : 's'} ago`
+  return formatDate(d)
+}

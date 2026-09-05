@@ -51,10 +51,11 @@ const create = asyncHandler(async (req, res) => {
   if (exists) return badRequest(res, 'Email already registered — each user must have a unique email')
 
   try {
+    const plainPassword = String(password)
     const user = await User.create({
       name: String(name).trim(),
       email: String(email).toLowerCase().trim(),
-      password,
+      password: plainPassword,
       role: role || 'employee',
       phone: phone ? String(phone).replace(/\D/g, '') : undefined,
       isActive: isActive !== false,
@@ -62,8 +63,42 @@ const create = asyncHandler(async (req, res) => {
 
     await ensureEmployeeForUser(user, { basicSalary: Number(basicSalary) })
 
+    // Send login credentials to the new user's email (never fail account creation)
+    let credentialsEmail = { sent: false }
+    try {
+      const { sendWelcomeCredentialsEmail } = require('../services/emailService')
+      const { createNotification, safeNotify } = require('../services/notificationService')
+      credentialsEmail = await sendWelcomeCredentialsEmail({
+        to: user.email,
+        name: user.name,
+        loginId: user.email,
+        password: plainPassword,
+        role: user.role,
+      })
+      await safeNotify('user-welcome', async () => {
+        await createNotification({
+          userId: user._id,
+          title: 'Welcome to PeoplePay360',
+          message: 'Your account was created. Check your email for login ID and password.',
+          type: 'system',
+          metadata: { emailSent: !!credentialsEmail.sent, mocked: !!credentialsEmail.mocked },
+        })
+      })
+    } catch (mailErr) {
+      console.error('[user-create-email]', mailErr.message)
+    }
+
     const populated = await User.findById(user._id).populate('employee', 'firstName lastName employeeId')
-    created(res, populated)
+    const payload = populated.toObject ? populated.toObject() : { ...populated }
+    payload.credentialsEmail = {
+      sent: !!credentialsEmail.sent,
+      mocked: !!credentialsEmail.mocked,
+      to: credentialsEmail.to || user.email,
+      error: credentialsEmail.error || undefined,
+    }
+    created(res, payload, credentialsEmail.sent
+      ? (credentialsEmail.mocked ? 'User created (email mocked — SMTP not configured)' : 'User created and login credentials emailed')
+      : 'User created, but credentials email could not be sent')
   } catch (err) {
     if (err.code === 11000) return badRequest(res, 'Email already registered — each user must have a unique email')
     throw err
