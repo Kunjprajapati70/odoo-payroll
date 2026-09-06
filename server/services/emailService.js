@@ -215,9 +215,11 @@ const sendContractExpiryEmail = async ({
   return sendMailSafe({ to, subject, html })
 }
 
-const sendPasswordResetEmail = async (toEmail, rawToken, name) => {
+const sendPasswordResetEmail = async (toEmail, rawToken, name, { baseUrl } = {}) => {
   const { CLIENT_URL } = require('../config/env')
-  const resetUrl = `${CLIENT_URL}/reset-password?token=${encodeURIComponent(rawToken)}`
+  const origin = String(baseUrl || CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '')
+  // Keep token unencoded in path-safe hex (raw is already hex); still encode for query safety
+  const resetUrl = `${origin}/reset-password?token=${encodeURIComponent(rawToken)}`
 
   if (!isValidEmail(toEmail)) {
     throw new AppError('Valid email is required', 400)
@@ -242,12 +244,19 @@ const sendPasswordResetEmail = async (toEmail, rawToken, name) => {
     }
   }
 
+  const { subject, html } = templates.passwordResetEmail({
+    name,
+    resetUrl,
+    companyName: COMPANY_NAME,
+  })
+
   try {
     await transporter.sendMail({
-      from: SMTP_FROM || SMTP_USER,
+      from: SMTP_FROM || `PeoplePay360 <${SMTP_USER}>`,
       to: toEmail,
-      subject: `${COMPANY_NAME} — Password reset`,
-      text: `Hi ${name || 'there'},\n\nReset your password using this link (valid 1 hour):\n${resetUrl}\n\nIf you did not request this, ignore this email.\n\n${COMPANY_NAME}`,
+      subject,
+      html,
+      text: `Hi ${name || 'there'},\n\nReset your password (valid 1 hour):\n${resetUrl}\n\nIf you did not request this, ignore this email.\n\n${COMPANY_NAME}`,
     })
     return { sent: true, mocked: false, to: toEmail, resetUrl }
   } catch (err) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext } from 'react'
+import { useState, useEffect, useCallback, useContext, useMemo } from 'react'
 import { Plus, Edit2, Trash2, Search } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/common/Button'
@@ -11,17 +11,26 @@ import StatusBadge from '../../components/common/StatusBadge'
 import ErrorState from '../../components/common/ErrorState'
 import { userService } from '../../services/userService'
 import { AppContext } from '../../context/AppContext'
+import { useAuth } from '../../hooks/useAuth'
 import { ROLES } from '../../utils/constants'
+import { can } from '../../utils/permissions'
 import { isValidEmail, isValidPhone, isRequired, minLength, normalizePhone, isPositiveNumber } from '../../utils/validators'
 import { useDebounce } from '../../hooks/useDebounce'
 import { formatFullName } from '../../utils/formatters'
 
-const ROLE_OPTS = Object.values(ROLES).map(r => ({
+const ALL_ROLE_OPTS = Object.values(ROLES).map(r => ({
   value: r,
   label: r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
 }))
 
-function UserForm({ initial, onSubmit, loading, onClose }) {
+const HR_ASSIGNABLE = [
+  ROLES.EMPLOYEE,
+  ROLES.HR_MANAGER,
+  ROLES.PAYROLL_USER,
+  ROLES.PAYROLL_MANAGER,
+]
+
+function UserForm({ initial, onSubmit, loading, onClose, roleOptions }) {
   const isEdit = !!initial?._id
   const [form, setForm] = useState({
     name: initial?.name || '',
@@ -79,7 +88,7 @@ function UserForm({ initial, onSubmit, loading, onClose }) {
         <Input label="Full Name *" value={form.name} onChange={set('name')} error={errors.name} />
         <Input label="Email *" type="email" value={form.email} onChange={set('email')} error={errors.email} disabled={isEdit} />
         <Input label="Phone (10 digits)" value={form.phone} onChange={set('phone')} error={errors.phone} placeholder="9876543210" maxLength={14} />
-        <Select label="Role *" options={ROLE_OPTS} value={form.role} onChange={set('role')} error={errors.role} />
+        <Select label="Role *" options={roleOptions} value={form.role} onChange={set('role')} error={errors.role} />
         <Input
           label={isEdit ? 'New Password (optional)' : 'Password *'}
           type="password"
@@ -98,7 +107,10 @@ function UserForm({ initial, onSubmit, loading, onClose }) {
           placeholder="e.g. 50000"
         />
       </div>
-      <p className="text-xs text-gray-500">Employee profile, leave balance, and payroll contract are created automatically.</p>
+      <p className="text-xs text-gray-500">
+        Employee profile, leave balance, and payroll contract are created automatically.
+        {!isEdit && ' Login credentials are emailed to the user.'}
+      </p>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={form.isActive} onChange={set('isActive')} className="rounded border-gray-300" />
         Active account
@@ -113,6 +125,16 @@ function UserForm({ initial, onSubmit, loading, onClose }) {
 
 export default function Users() {
   const { addToast } = useContext(AppContext)
+  const { user: currentUser } = useAuth()
+  const isAdmin = currentUser?.role === ROLES.ADMIN
+  const isHr = currentUser?.role === ROLES.HR_MANAGER
+  const canWrite = can(currentUser, 'users:write')
+
+  const roleOptions = useMemo(
+    () => (isAdmin ? ALL_ROLE_OPTS : ALL_ROLE_OPTS.filter(o => HR_ASSIGNABLE.includes(o.value))),
+    [isAdmin]
+  )
+
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -144,6 +166,20 @@ export default function Users() {
   }, [appliedSearch, roleFilter])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  const canEditRow = (row) => {
+    if (!canWrite) return false
+    if (isAdmin) return true
+    if (isHr && row.role === ROLES.ADMIN) return false
+    return true
+  }
+
+  const canDeleteRow = (row) => {
+    if (!canWrite) return false
+    if (String(row._id) === String(currentUser?._id)) return false
+    if (isHr && row.role === ROLES.ADMIN) return false
+    return true
+  }
 
   const handleSave = async (data) => {
     setSaving(true)
@@ -204,6 +240,16 @@ export default function Users() {
       render: r => <span className="text-sm text-gray-600">{formatFullName(r.employee) || '—'}</span>,
     },
     {
+      key: 'createdBy', label: 'Created by',
+      render: r => (
+        <span className="text-sm text-gray-600">
+          {r.createdBy?.name
+            ? `${r.createdBy.name}${r.createdBy.role ? ` (${String(r.createdBy.role).replace(/_/g, ' ')})` : ''}`
+            : '—'}
+        </span>
+      ),
+    },
+    {
       key: 'status', label: 'Status',
       render: r => <StatusBadge status={r.isActive ? 'active' : 'inactive'} />,
     },
@@ -211,12 +257,16 @@ export default function Users() {
       key: 'actions', label: '', width: 90,
       render: row => (
         <div className="flex items-center gap-1 justify-end">
-          <button onClick={() => setModal({ type: 'edit', data: row })} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Edit">
-            <Edit2 size={15} />
-          </button>
-          <button onClick={() => setDeleteTarget(row)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
-            <Trash2 size={15} />
-          </button>
+          {canEditRow(row) && (
+            <button onClick={() => setModal({ type: 'edit', data: row })} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+              <Edit2 size={15} />
+            </button>
+          )}
+          {canDeleteRow(row) && (
+            <button onClick={() => setDeleteTarget(row)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
       ),
     },
@@ -226,8 +276,12 @@ export default function Users() {
     <div>
       <PageHeader
         title="Users"
-        subtitle="Admin user management — create, edit, and delete accounts"
-        actions={<Button icon={Plus} onClick={() => setModal({ type: 'create' })}>Add User</Button>}
+        subtitle={isHr
+          ? 'HR user management — create accounts (credentials emailed automatically)'
+          : 'User management — create, edit, and delete accounts'}
+        actions={canWrite ? (
+          <Button icon={Plus} onClick={() => setModal({ type: 'create' })}>Add User</Button>
+        ) : null}
       />
 
       <div className="card mb-4 p-4 flex flex-nowrap items-end gap-3 overflow-x-auto">
@@ -251,7 +305,7 @@ export default function Users() {
         <div className="w-44 shrink-0">
           <Select
             label="Role"
-            options={[{ value: '', label: 'All Roles' }, ...ROLE_OPTS]}
+            options={[{ value: '', label: 'All Roles' }, ...roleOptions]}
             value={roleFilter}
             onChange={e => setRoleFilter(e.target.value)}
             className="py-1.5"
@@ -268,7 +322,13 @@ export default function Users() {
       )}
 
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Edit User' : 'Create User'} size="md">
-        <UserForm initial={modal?.data} onSubmit={handleSave} loading={saving} onClose={() => setModal(null)} />
+        <UserForm
+          initial={modal?.data}
+          onSubmit={handleSave}
+          loading={saving}
+          onClose={() => setModal(null)}
+          roleOptions={roleOptions}
+        />
       </Modal>
 
       <ConfirmDialog

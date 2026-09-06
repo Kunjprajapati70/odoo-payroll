@@ -28,16 +28,18 @@ import Reports from '../pages/reports/Reports'
 import Settings from '../pages/settings/Settings'
 import { ROLES } from '../utils/constants'
 import { useAuth } from '../hooks/useAuth'
-
-function AdminOnly({ children }) {
-  const { user } = useAuth()
-  if (user?.role !== ROLES.ADMIN) return <Navigate to="/dashboard" replace />
-  return children
-}
+import { can } from '../utils/permissions'
 
 function StaffOnly({ children }) {
   const { user } = useAuth()
   if (user?.role === ROLES.EMPLOYEE) return <Navigate to="/dashboard" replace />
+  return children
+}
+
+/** Route guard aligned with client permission matrix (access-based pages). */
+function RequireCan({ action, children }) {
+  const { user } = useAuth()
+  if (!can(user, action)) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -53,30 +55,30 @@ export default function AppRoutes() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/users" element={<AdminOnly><Users /></AdminOnly>} />
+          <Route path="/users" element={<RequireCan action="users:read"><Users /></RequireCan>} />
 
-          <Route path="/employees" element={<StaffOnly><Employees /></StaffOnly>} />
-          <Route path="/employees/new" element={<StaffOnly><EmployeeFormPage /></StaffOnly>} />
-          <Route path="/employees/:id" element={<StaffOnly><EmployeeDetails /></StaffOnly>} />
-          <Route path="/employees/:id/edit" element={<StaffOnly><EmployeeFormPage /></StaffOnly>} />
+          <Route path="/employees" element={<StaffOnly><RequireCan action="employees:read"><Employees /></RequireCan></StaffOnly>} />
+          <Route path="/employees/new" element={<StaffOnly><RequireCan action="employees:write"><EmployeeFormPage /></RequireCan></StaffOnly>} />
+          <Route path="/employees/:id" element={<StaffOnly><RequireCan action="employees:read"><EmployeeDetails /></RequireCan></StaffOnly>} />
+          <Route path="/employees/:id/edit" element={<StaffOnly><RequireCan action="employees:write"><EmployeeFormPage /></RequireCan></StaffOnly>} />
 
-          <Route path="/departments" element={<StaffOnly><Departments /></StaffOnly>} />
-          <Route path="/contracts" element={<StaffOnly><Contracts /></StaffOnly>} />
-          <Route path="/schedules" element={<StaffOnly><Schedules /></StaffOnly>} />
-          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/departments" element={<StaffOnly><RequireCan action="departments:read"><Departments /></RequireCan></StaffOnly>} />
+          <Route path="/contracts" element={<StaffOnly><RequireCan action="contracts:read"><Contracts /></RequireCan></StaffOnly>} />
+          <Route path="/schedules" element={<StaffOnly><RequireCan action="schedules:read"><Schedules /></RequireCan></StaffOnly>} />
+          <Route path="/attendance" element={<RequireCan action="attendance:read"><Attendance /></RequireCan>} />
 
-          <Route path="/time-off/types" element={<StaffOnly><TimeOffTypes /></StaffOnly>} />
-          <Route path="/time-off/allocations" element={<StaffOnly><TimeOffAllocations /></StaffOnly>} />
-          <Route path="/time-off/requests" element={<TimeOffRequests />} />
+          <Route path="/time-off/types" element={<StaffOnly><RequireCan action="timeoff:write"><TimeOffTypes /></RequireCan></StaffOnly>} />
+          <Route path="/time-off/allocations" element={<StaffOnly><RequireCan action="timeoff:write"><TimeOffAllocations /></RequireCan></StaffOnly>} />
+          <Route path="/time-off/requests" element={<RequireCan action="timeoff:read"><TimeOffRequests /></RequireCan>} />
 
-          <Route path="/payroll/structures" element={<StaffOnly><SalaryStructures /></StaffOnly>} />
-          <Route path="/payroll/rules" element={<StaffOnly><SalaryRules /></StaffOnly>} />
-          <Route path="/payroll/payruns" element={<StaffOnly><Payruns /></StaffOnly>} />
-          <Route path="/payroll/payruns/new" element={<StaffOnly><CreatePayrun /></StaffOnly>} />
+          <Route path="/payroll/structures" element={<StaffOnly><RequireCan action="payroll:read"><SalaryStructures /></RequireCan></StaffOnly>} />
+          <Route path="/payroll/rules" element={<StaffOnly><RequireCan action="payroll:read"><SalaryRules /></RequireCan></StaffOnly>} />
+          <Route path="/payroll/payruns" element={<StaffOnly><RequireCan action="payroll:read"><Payruns /></RequireCan></StaffOnly>} />
+          <Route path="/payroll/payruns/new" element={<StaffOnly><RequireCan action="payroll:write"><CreatePayrun /></RequireCan></StaffOnly>} />
           <Route path="/payroll/payslips" element={<Payslips />} />
           <Route path="/payroll/payslips/:id" element={<PayslipDetails />} />
 
-          <Route path="/reports" element={<StaffOnly><Reports /></StaffOnly>} />
+          <Route path="/reports" element={<StaffOnly><RequireCan action="reports:read"><Reports /></RequireCan></StaffOnly>} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>

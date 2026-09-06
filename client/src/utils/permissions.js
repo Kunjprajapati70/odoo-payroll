@@ -8,7 +8,7 @@ export const can = (user, action) => {
     [ROLES.ADMIN]: ['*'],
 
     [ROLES.HR_MANAGER]: [
-      'users:read',
+      'users:read', 'users:write',
       'employees:read', 'employees:write',
       'departments:read', 'departments:write',
       'contracts:read', 'contracts:write',

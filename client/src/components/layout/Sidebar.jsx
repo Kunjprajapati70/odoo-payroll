@@ -12,7 +12,7 @@ import { ROLES } from '../../utils/constants'
 
 const allNavItems = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
-  { key: 'users', label: 'Users', icon: UserCog, to: '/users', adminOnly: true },
+  { key: 'users', label: 'Users', icon: UserCog, to: '/users' },
   { key: 'employees', label: 'Employees', icon: Users, to: '/employees' },
   { key: 'departments', label: 'Departments', icon: Building2, to: '/departments' },
   { key: 'contracts', label: 'Contracts', icon: FileText, to: '/contracts' },
@@ -81,12 +81,8 @@ export default function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useContext(AppContext)
   const { user } = useAuth()
   const isEmployee = user?.role === ROLES.EMPLOYEE
-  const isAdmin = user?.role === ROLES.ADMIN
 
-  const navItems = allNavItems.filter(item => {
-    if (item.adminOnly && !isAdmin) return false
-    return canSeeNav(user, item.key)
-  })
+  const navItems = allNavItems.filter(item => canSeeNav(user, item.key))
 
   return (
     <>

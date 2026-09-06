@@ -32,6 +32,20 @@ const TIMEOFF_APPROVE_ROLES = [
   ROLES.HR_MANAGER,
 ]
 
+/** Who can manage user accounts */
+const USER_MANAGE_ROLES = [
+  ROLES.ADMIN,
+  ROLES.HR_MANAGER,
+]
+
+/** Roles an HR Manager may assign when creating/updating users (not admin) */
+const HR_ASSIGNABLE_ROLES = [
+  ROLES.EMPLOYEE,
+  ROLES.HR_MANAGER,
+  ROLES.HR_PAYROLL_USER,
+  ROLES.HR_PAYROLL_MANAGER,
+]
+
 module.exports = {
   ROLES,
   ALL_ROLES,
@@ -39,4 +53,6 @@ module.exports = {
   PAYROLL_WRITE_ROLES,
   PAYROLL_APPROVE_ROLES,
   TIMEOFF_APPROVE_ROLES,
+  USER_MANAGE_ROLES,
+  HR_ASSIGNABLE_ROLES,
 }

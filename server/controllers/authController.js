@@ -93,12 +93,25 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const rawToken = user.createPasswordResetToken()
   await user.save({ validateBeforeSave: false })
 
-  const mailResult = await sendPasswordResetEmail(user.email, rawToken, user.name)
+  // Prefer browser Origin so Wi‑Fi / LAN links open correctly (not always localhost)
+  const { CLIENT_URL } = require('../config/env')
+  let baseUrl = CLIENT_URL || 'http://localhost:5173'
+  const originHeader = req.get('origin') || req.get('referer')
+  if (originHeader) {
+    try {
+      const u = new URL(originHeader)
+      baseUrl = `${u.protocol}//${u.host}`
+    } catch {
+      /* keep CLIENT_URL */
+    }
+  }
+
+  const mailResult = await sendPasswordResetEmail(user.email, rawToken, user.name, { baseUrl })
 
   // In demo/dev without SMTP, return token so UI can complete the flow
   const payload = mailResult?.mocked
-    ? { resetToken: rawToken, mocked: true, message: mailResult.message }
-    : null
+    ? { resetToken: rawToken, mocked: true, resetUrl: mailResult.resetUrl, message: mailResult.message }
+    : { resetUrl: mailResult?.resetUrl, mocked: false }
 
   success(res, payload, 'Reset link sent if account exists')
 })

@@ -11,11 +11,13 @@ const userSchema = new mongoose.Schema({
   role:     { type: String, enum: ALL_ROLES, default: ROLES.EMPLOYEE },
   isActive: { type: Boolean, default: true },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   resetPasswordToken:   { type: String, select: false },
   resetPasswordExpires: { type: Date, select: false },
 }, { timestamps: true })
 
 userSchema.index({ role: 1 })
+userSchema.index({ createdAt: -1 })
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next()

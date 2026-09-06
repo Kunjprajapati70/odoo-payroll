@@ -34,6 +34,12 @@ const findHrApproverUsers = async () =>
     isActive: true,
   }).select('_id name email role')
 
+const findAdminUsers = async () =>
+  User.find({
+    role: ROLES.ADMIN,
+    isActive: true,
+  }).select('_id name email role')
+
 const findUserForEmployee = async (employeeId) => {
   if (!employeeId) return null
   const emp = await Employee.findById(employeeId).select('user email')
@@ -79,6 +85,7 @@ module.exports = {
   createNotification,
   safeNotify,
   findHrApproverUsers,
+  findAdminUsers,
   findUserForEmployee,
   listForUser,
   markAsRead,

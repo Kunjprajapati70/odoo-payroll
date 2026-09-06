@@ -196,6 +196,30 @@ const contractExpiryEmail = ({
   return { subject: title, html }
 }
 
+const passwordResetEmail = ({ name, resetUrl, companyName }) => {
+  const title = 'Reset your password'
+  const safeUrl = escapeHtml(resetUrl)
+  const html = wrap(
+    title,
+    `
+      <p style="margin:0 0 12px;line-height:1.5;">Hi ${escapeHtml(name || 'there')},</p>
+      <p style="margin:0 0 16px;line-height:1.5;">We received a request to reset your PeoplePay360 password. Click the button below to choose a new password. This link expires in <strong>1 hour</strong>.</p>
+      <p style="margin:0 0 20px;text-align:center;">
+        <a href="${safeUrl}" style="display:inline-block;background:#0f766e;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:8px;">
+          Reset Password
+        </a>
+      </p>
+      <p style="margin:0 0 8px;font-size:12px;color:#6b7280;line-height:1.5;">If the button does not work, copy and paste this link into your browser:</p>
+      <p style="margin:0;font-size:12px;word-break:break-all;color:#0f766e;line-height:1.5;">
+        <a href="${safeUrl}" style="color:#0f766e;">${safeUrl}</a>
+      </p>
+      <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">If you did not request this, you can ignore this email.</p>
+    `,
+    companyName
+  )
+  return { subject: `${companyName || 'PeoplePay360'} — Password reset`, html }
+}
+
 const welcomeCredentialsEmail = ({
   name,
   loginId,
@@ -233,5 +257,6 @@ module.exports = {
   payslipGeneratedEmail,
   payrollPaidEmail,
   contractExpiryEmail,
+  passwordResetEmail,
   welcomeCredentialsEmail,
 }

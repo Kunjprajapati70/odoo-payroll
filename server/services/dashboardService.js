@@ -4,6 +4,8 @@ const Attendance = require('../models/Attendance')
 const TimeOffRequest = require('../models/TimeOffRequest')
 const Contract = require('../models/Contract')
 const Department = require('../models/Department')
+const User = require('../models/User')
+const { ROLES } = require('../utils/roles')
 const { startOfMonth, endOfMonth } = require('../utils/dateUtils')
 
 const toNumber = (v) => (typeof v === 'number' ? v : 0)
@@ -100,12 +102,31 @@ const getSummary = async ({ month, year, department } = {}) => {
   const totalAtt = attendanceAgg.reduce((s, a) => s + a.count, 0)
   const attendanceHealth = totalAtt > 0 ? Math.round((present / totalAtt) * 100) : 100
 
-  const [salaryByDept, monthlyTrend, attendanceOverview, timeOffOverview] = await Promise.all([
+  const [salaryByDept, monthlyTrend, attendanceOverview, timeOffOverview, recentUsers, hrCreatedThisMonth] = await Promise.all([
     getSalaryByDepartment(rangeStart, rangeEnd),
     getMonthlySalaryTrend(y),
     getAttendanceOverview(rangeStart, rangeEnd, employeeIds),
     getTimeOffOverview(y, employeeIds),
+    User.find()
+      .sort({ createdAt: -1 })
+      .limit(8)
+      .select('name email role isActive createdAt createdBy')
+      .populate('createdBy', 'name role')
+      .lean(),
+    User.countDocuments({
+      createdAt: { $gte: rangeStart, $lte: rangeEnd },
+    }),
   ])
+
+  // Count users created by HR managers (for admin activity)
+  const hrManagerIds = await User.find({ role: ROLES.HR_MANAGER }).select('_id').lean()
+  const hrIds = hrManagerIds.map((u) => u._id)
+  const usersCreatedByHr = hrIds.length
+    ? await User.countDocuments({
+        createdBy: { $in: hrIds },
+        createdAt: { $gte: rangeStart, $lte: rangeEnd },
+      })
+    : 0
 
   return {
     totalEmployees,
@@ -120,6 +141,9 @@ const getSummary = async ({ month, year, department } = {}) => {
     timeOffOverview,
     departmentDistribution: deptDist,
     alerts,
+    recentUsers,
+    usersCreatedThisMonth: hrCreatedThisMonth,
+    usersCreatedByHrThisMonth: usersCreatedByHr,
     filters: { month: m, year: y, department: department || null },
   }
 }
